@@ -1,1 +1,5 @@
 .idea/
+bower_components/
+data/
+node_modules/
+typings/

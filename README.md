@@ -10,3 +10,10 @@ Potential functionality:
 	<li>Point or cluster inspector to reveal fine-grain data records, and/or high level charts/visualsation of aggregated data.</li>
 	<li>Clip, zip, ship</li>
 </ul>	
+
+# Get started
+
+`$ npm install`
+`$ bower install`
+`$ tsd install`
+`$ gulp`

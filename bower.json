@@ -1,0 +1,36 @@
+{
+  "name": "explorer-rock-properties-components",
+  "version": "0.0.1-SNAPSHOT",
+  "description": "Explorer Rock Properties Components for CesiumJS",
+  "keywords": [
+    "angularjs",
+    "javascript",
+	"typescript",
+    "cesium"
+  ],
+  "main": [
+    "dist/explorer-rock-properties-components.js",
+    "dist/explorer-rock-properties-components.min.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/GeoscienceAustralia/explorer-rock-properties-components.git"
+  },
+  "authors": [
+    "Geoscience Australia"
+  ],
+  "license": "https://raw.githubusercontent.com/GeoscienceAustralia/explorer-rock-properties-components/master/LICENCE",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "src",
+    "test",
+    "gulpfile.js",
+    "package.json",
+    "bower.json"
+  ],
+  "dependencies": {
+    "cesiumjs": "1.15.x"
+  }
+}

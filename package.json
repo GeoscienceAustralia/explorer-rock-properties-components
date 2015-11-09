@@ -1,0 +1,38 @@
+{
+  "name": "ExplorerRockPropertiesComponents",
+  "version": "0.0.1-SNAPSHOT",
+  "description": "Explorer Rock Properties Components for CesiumJS",
+  "keywords": [
+    "Angular",
+    "Cesium",
+    "TypeScript",
+    "Explorer",
+    "Map",
+    "component"
+  ],
+  "author": {
+    "name": "Geoscience Australia",
+    "url": "http://www.ga.gov.au/"
+  },
+  "homepage": "http://www.ga.gov.au/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GeoscienceAustralia/explorer-rock-properties-components"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "add-stream": "^1.0.0",
+    "gulp": "^3.8.11",
+    "gulp-angular-templatecache": "^1.6.0",
+    "gulp-concat": "^2.5.2",
+    "gulp-concat-css": "^2.2.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^1.5.2",
+    "gulp-tslint": "^3.3.0-beta",
+    "gulp-typescript": "^2.8.3",
+    "gulp-uglify": "^1.2.0",
+    "tsd": "^0.6.5"
+  },
+  "bundleDependencies": [],
+  "private": false
+}
