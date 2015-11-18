@@ -10,12 +10,14 @@ module rpComponents.clusterService {
 
         viewer: any;
         serviceUrl: string;
-        clustersEntity: any;
+        clustersCollection: any;
 
         toggleClusters(): void;
         getClusters(): [rpComponents.cluster.ICluster];
         addClusters(): void;
-        drawCluster(cluster: rpComponents.cluster.ICluster): void;
+        buildSphereInstance(cluster: rpComponents.cluster.ICluster): any;
+        buildLabel(cluster: rpComponents.cluster.ICluster): any;
+        drawClusters(sphereInstances: any, labelCollection: any): void;
     }
 
     export class ClusterService implements IClusterService {
@@ -23,14 +25,16 @@ module rpComponents.clusterService {
         http: ng.IHttpService;
         viewer: any;
         serviceUrl: string;
-        clustersEntity: any;
+        clustersCollection: any;
 
         static $inject = [
             "$http",
+            "$rootScope"
         ];
 
         constructor(
-            public $http: ng.IHttpService
+            public $http: ng.IHttpService,
+            public $rootScope: ng.IRootScopeService
         ) {}
 
         init(viewer: any, serviceUrl: string): void {
@@ -40,21 +44,36 @@ module rpComponents.clusterService {
 
         toggleClusters(): void {
 
-            if(this.clustersEntity){
-                this.clustersEntity.show = !this.clustersEntity.show;
+            if(this.clustersCollection){
+                this.clustersCollection.show = !this.clustersCollection.show;
             }
             else {
-                this.clustersEntity = new Cesium.Entity();
-                this.viewer.entities.add(this.clustersEntity);
+                this.clustersCollection = new Cesium.PrimitiveCollection();
+                this.viewer.scene.primitives.add(this.clustersCollection);
+
                 this.addClusters();
             }
         }
 
+        /**
+         *
+         * This will be extended to use extent + zoom on cluster service
+         *
+         * @returns {IHttpPromise<T>}
+         */
         getClusters(): any {
             return this.$http.get(this.serviceUrl + 'clusters');
         }
 
+        /**
+         *
+         * We get a performance benefit when we use fewer primitives/collections to draw multiple static geometries.
+         *
+         */
         addClusters(): void {
+
+            var sphereInstances: any = [];
+            var labelCollection: any = new Cesium.LabelCollection();
 
             this.getClusters().then((response: any) => {
 
@@ -63,8 +82,11 @@ module rpComponents.clusterService {
                     var clusters: [rpComponents.cluster.ICluster] = response.data;
 
                     for(var i = 0; i < clusters.length; i++){
-                        this.drawCluster(clusters[i]);
+                        sphereInstances.push(this.buildSphereInstance(clusters[i]));
+                        labelCollection.add(this.buildLabel(clusters[i]));
                     }
+
+                    this.drawClusters(sphereInstances, labelCollection);
                 }
                 else {
                     console.log("got no clusters");
@@ -72,24 +94,62 @@ module rpComponents.clusterService {
             });
         }
 
-        drawCluster(cluster: rpComponents.cluster.ICluster): void{
+
+        drawClusters(sphereInstances: any, labelCollection: any): void {
+
+            this.clustersCollection.add(new Cesium.Primitive({
+                geometryInstances : sphereInstances,
+                appearance : new Cesium.PerInstanceColorAppearance({
+                    translucent : true,
+                    closed : true
+                })
+            }));
+
+            this.clustersCollection.add(labelCollection);
+        }
+
+        buildSphereInstance(cluster: rpComponents.cluster.ICluster): any{
 
             var clusterProps: {size: number, color: any} = this.computeClusterAttributes(cluster.count);
 
-            this.viewer.entities.add({
-                parent: this.clustersEntity,
-                label: {
-                    text: cluster.count.toString(),
-                    fillColor: Cesium.Color.BLACK,
-                    outlineColor: Cesium.Color.WHITE,
-                    eyeOffset: new Cesium.Cartesian3(0, (clusterProps.size * 2) + cluster.elev, 0)
-                },
-                position: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, cluster.elev + clusterProps.size),
-                ellipsoid : {
-                    radii : new Cesium.Cartesian3(clusterProps.size, clusterProps.size, clusterProps.size),
-                    material : clusterProps.color
+            // Sphere geometries are initially centered on the origin.
+            // We can use a model matrix to position the sphere on the globe surface.
+            var positionOnEllipsoid = Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat);
+            var modelMatrix = Cesium.Matrix4.multiplyByTranslation(
+                Cesium.Transforms.eastNorthUpToFixedFrame(positionOnEllipsoid),
+                new Cesium.Cartesian3(cluster.lon, cluster.lat, cluster.elev + clusterProps.size), new Cesium.Matrix4()
+            );
+            // Create a sphere geometry.
+            var sphereGeometry = new Cesium.SphereGeometry({
+                vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+                radius : clusterProps.size
+            });
+
+            // Create a geometry instance using the geometry and model matrix created above.
+            var sphereInstance = new Cesium.GeometryInstance({
+                geometry : sphereGeometry,
+                modelMatrix : modelMatrix,
+                attributes : {
+                    color : Cesium.ColorGeometryInstanceAttribute.fromColor(clusterProps.color)
                 }
             });
+
+            return sphereInstance;
+        }
+
+        buildLabel(cluster: rpComponents.cluster.ICluster): any{
+
+            var clusterProps: {size: number, color: any} = this.computeClusterAttributes(cluster.count);
+
+            return {
+                position : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, cluster.elev + 20 + (clusterProps.size * 2)),
+                text: cluster.count.toString(),
+                fillColor: Cesium.Color.BLACK,
+                outlineColor: Cesium.Color.RED,
+                font: '30px arial, sans-serif',
+                horizontalOrigin: Cesium.HorizontalOrigin.CENTER//,
+                //eyeOffset: new Cesium.Cartesian3.fromDegrees(0, 0, cluster.elev)
+            };
         }
 
         computeClusterAttributes(count: number): any {
@@ -109,6 +169,8 @@ module rpComponents.clusterService {
     // ng register
     angular
         .module('explorer.rockproperties.clusters', [])
-        .factory("clusterService", ["$http", ($http: ng.IHttpService) => new rpComponents.clusterService.ClusterService($http)]);
+        .factory("clusterService", ["$http", "$rootScope",
+            ($http: ng.IHttpService, $rootScope: ng.IRootScopeService) =>
+                new rpComponents.clusterService.ClusterService($http, $rootScope)]);
 
 }

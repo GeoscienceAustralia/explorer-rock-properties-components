@@ -13,7 +13,9 @@ Potential functionality:
 
 # Get started
 
-`$ npm install`
-`$ bower install`
-`$ tsd install`
-`$ gulp`
+<code>
+$ npm install<br/>
+$ bower install<br/>
+$ tsd install<br/>
+$ gulp
+</code>
