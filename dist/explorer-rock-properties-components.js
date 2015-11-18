@@ -44,22 +44,26 @@ var rpComponents;
     (function (clusterService) {
         'use strict';
         var ClusterService = (function () {
-            function ClusterService($http, $rootScope) {
+            function ClusterService($http, $rootScope, zoomLevelService) {
                 this.$http = $http;
                 this.$rootScope = $rootScope;
+                this.zoomLevelService = zoomLevelService;
             }
             ClusterService.prototype.init = function (viewer, serviceUrl) {
                 this.viewer = viewer;
+                this.zoomLevelService.viewer = viewer;
                 this.serviceUrl = serviceUrl;
             };
             ClusterService.prototype.toggleClusters = function () {
                 if (this.clustersCollection) {
                     this.clustersCollection.show = !this.clustersCollection.show;
+                    this.zoomLevelService.setActive(this.clustersCollection.show);
                 }
                 else {
                     this.clustersCollection = new Cesium.PrimitiveCollection();
                     this.viewer.scene.primitives.add(this.clustersCollection);
                     this.addClusters();
+                    this.zoomLevelService.setActive(true);
                 }
             };
             /**
@@ -149,7 +153,8 @@ var rpComponents;
             };
             ClusterService.$inject = [
                 "$http",
-                "$rootScope"
+                "$rootScope",
+                "zoomLevelService"
             ];
             return ClusterService;
         })();
@@ -157,9 +162,54 @@ var rpComponents;
         // ng register
         angular
             .module('explorer.rockproperties.clusters', [])
-            .factory("clusterService", ["$http", "$rootScope",
-            function ($http, $rootScope) {
-                return new rpComponents.clusterService.ClusterService($http, $rootScope);
+            .factory("clusterService", ["$http", "$rootScope", "zoomLevelService",
+            function ($http, $rootScope, zoomLevelService) {
+                return new rpComponents.clusterService.ClusterService($http, $rootScope, zoomLevelService);
             }]);
     })(clusterService = rpComponents.clusterService || (rpComponents.clusterService = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/tsd.d.ts" />
+/**
+ *
+ * Handles the arbitrary 'zoom' levels/ranges that we will display different cluster granularities.
+ *
+ *
+ */
+var rpComponents;
+(function (rpComponents) {
+    var zoom;
+    (function (zoom) {
+        'use strict';
+        var ZoomLevelService = (function () {
+            function ZoomLevelService($rootScope) {
+                var _this = this;
+                this.$rootScope = $rootScope;
+                /**
+                 * TS syntax to so we don't lose this scope for event listener
+                 * https://github.com/Microsoft/TypeScript/wiki/'this'-in-TypeScript
+                 */
+                this.moveEndHandler = function () {
+                    console.log(Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.position).height);
+                };
+            }
+            ZoomLevelService.prototype.setActive = function (active) {
+                if (active) {
+                    this.viewer.camera.moveEnd.addEventListener(this.moveEndHandler);
+                }
+                else {
+                    this.viewer.camera.moveEnd.removeEventListener(this.moveEndHandler);
+                }
+            };
+            ZoomLevelService.$inject = [
+                "$rootScope"
+            ];
+            return ZoomLevelService;
+        })();
+        zoom.ZoomLevelService = ZoomLevelService;
+        // ng register
+        angular
+            .module('explorer.rockproperties.zoom', [])
+            .factory("zoomLevelService", ["$rootScope",
+            function ($rootScope) { return new rpComponents.zoom.ZoomLevelService($rootScope); }]);
+    })(zoom = rpComponents.zoom || (rpComponents.zoom = {}));
 })(rpComponents || (rpComponents = {}));

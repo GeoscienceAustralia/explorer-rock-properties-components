@@ -22,36 +22,43 @@ module rpComponents.clusterService {
 
     export class ClusterService implements IClusterService {
 
-        http: ng.IHttpService;
         viewer: any;
         serviceUrl: string;
         clustersCollection: any;
 
         static $inject = [
             "$http",
-            "$rootScope"
+            "$rootScope",
+            "zoomLevelService"
         ];
 
         constructor(
             public $http: ng.IHttpService,
-            public $rootScope: ng.IRootScopeService
+            public $rootScope: ng.IRootScopeService,
+            public zoomLevelService: rpComponents.zoom.IZoomLevelService
         ) {}
 
         init(viewer: any, serviceUrl: string): void {
+
             this.viewer = viewer;
+            this.zoomLevelService.viewer = viewer;
             this.serviceUrl = serviceUrl;
         }
 
         toggleClusters(): void {
 
             if(this.clustersCollection){
+
                 this.clustersCollection.show = !this.clustersCollection.show;
+                this.zoomLevelService.setActive(this.clustersCollection.show);
             }
             else {
                 this.clustersCollection = new Cesium.PrimitiveCollection();
                 this.viewer.scene.primitives.add(this.clustersCollection);
 
                 this.addClusters();
+
+                this.zoomLevelService.setActive(true);
             }
         }
 
@@ -169,8 +176,8 @@ module rpComponents.clusterService {
     // ng register
     angular
         .module('explorer.rockproperties.clusters', [])
-        .factory("clusterService", ["$http", "$rootScope",
-            ($http: ng.IHttpService, $rootScope: ng.IRootScopeService) =>
-                new rpComponents.clusterService.ClusterService($http, $rootScope)]);
+        .factory("clusterService", ["$http", "$rootScope", "zoomLevelService",
+            ($http: ng.IHttpService, $rootScope: ng.IRootScopeService, zoomLevelService: rpComponents.zoom.IZoomLevelService) =>
+                new rpComponents.clusterService.ClusterService($http, $rootScope, zoomLevelService)]);
 
 }
