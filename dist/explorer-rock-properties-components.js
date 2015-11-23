@@ -29,15 +29,12 @@ var rpComponents;
              *
              */
             ClusterChartService.prototype.buildChart = function (data) {
-                //console.log("TODO query service for cluster info for:");
-                //console.log(data);
-                // clean up
                 document.getElementById("cluster-summary-chart-d3").innerHTML = "";
+                // trigger open/display a chart div
                 this.$rootScope.$broadcast("chart.update", {
                     targetChartId: "clusterSummaryChart"
                 });
                 /*---------------------------------------- D3 -----------------------------------------*/
-                // eg http://plnkr.co/edit/x1xD82?p=preview
                 //'resources/mock-service/explorer-cossap-services/service/rock-properties/clusters/',
                 d3.json('resources/mock-service/explorer-cossap-services/service/rock-properties/clusters/cluster.json', function (error, dataset) {
                     // LAYOUT
@@ -130,7 +127,7 @@ var rpComponents;
                             .style("fill", "#000")
                             .style("font-weight", "bold")
                             .text(property.propertyName);
-                        // LEGEND PAGINATED
+                        // PAGINATED LEGEND
                         var legendCount = property.data.length;
                         var legendWidth = 15;
                         var legendSpacing = 6;
@@ -138,19 +135,19 @@ var rpComponents;
                         var legendPerPage;
                         var totalPages;
                         var pageNo;
-                        if (netLegendHeight / (radius) > 1) {
+                        if ((netLegendHeight / radius) > 1) {
                             legendPerPage = Math.floor(radius / (legendWidth + legendSpacing));
                             totalPages = Math.ceil(legendCount / legendPerPage);
                             pageNo = 1;
                             var startIndex = (pageNo - 1) * legendPerPage;
                             var endIndex = startIndex + legendPerPage;
-                            var seriesSubset = [];
+                            var dataSubset = [];
                             for (var i = 0; i < property.data.length; i++) {
                                 if (i >= startIndex && i < endIndex) {
-                                    seriesSubset.push(property.data[i]);
+                                    dataSubset.push(property.data[i]);
                                 }
                             }
-                            drawLegend(seriesSubset, legendPerPage, pageNo, totalPages);
+                            drawLegend(dataSubset, legendPerPage, pageNo, totalPages);
                         }
                         else {
                             drawLegend(property.data, Math.floor(radius / (legendWidth + legendSpacing)), 1, 1);
@@ -182,14 +179,14 @@ var rpComponents;
                                 .attr("dy", ".35em")
                                 .style("text-anchor", "start")
                                 .text(function (d) {
-                                // crude calc for truncation - ave 5px per char
+                                // truncate long labels
                                 var charSpace = (radius - 20) / 5;
                                 if (d.attributeName.length > charSpace)
                                     return d.attributeName.substring(0, charSpace) + '...';
                                 else
                                     return d.attributeName;
                             });
-                            // titles, attributes may be truncated
+                            // title tooltips
                             legendRect.append("svg:title").text(function (d) {
                                 var total = d3.sum(property.data.map(function (d) { return d.count; }));
                                 return d.attributeName + " (" + Math.round(1000 * d.count / total) / 10 + "%)";
@@ -242,13 +239,13 @@ var rpComponents;
                             svg.select('.next').remove();
                             var startIndex = (pageNo - 1) * legendPerPage;
                             var endIndex = startIndex + legendPerPage;
-                            var seriesSubset = [];
+                            var dataSubset = [];
                             for (var i = 0; i < property.data.length; i++) {
                                 if (i >= startIndex && i < endIndex) {
-                                    seriesSubset.push(property.data[i]);
+                                    dataSubset.push(property.data[i]);
                                 }
                             }
-                            drawLegend(seriesSubset, legendPerPage, pageNo, totalPages);
+                            drawLegend(dataSubset, legendPerPage, pageNo, totalPages);
                         }
                         function nextLegend() {
                             pageNo++;
@@ -269,13 +266,13 @@ var rpComponents;
                     });
                 });
                 /*---------------------------------------- /D3 -----------------------------------------*/
-                document.getElementById("cluster-summary-chart-d3").style.display = 'none';
                 // DEBUG emulate loading..
+                document.getElementById("cluster-summary-chart-d3").style.display = 'none';
                 // chart ready to go
                 setTimeout(function () {
                     document.getElementById("cluster-summary-chart-loading").style.display = 'none';
                     document.getElementById("cluster-summary-chart-d3").style.display = 'block';
-                }, 2000);
+                }, 1500);
                 return;
             };
             ClusterChartService.$inject = [
@@ -378,6 +375,12 @@ var rpComponents;
                     });
                 };
             }
+            /**
+             *
+             * @param viewer
+             * @param serviceUrl
+             * @param usePicking
+             */
             ClusterService.prototype.init = function (viewer, serviceUrl, usePicking) {
                 var _this = this;
                 this.viewer = viewer;
@@ -386,22 +389,29 @@ var rpComponents;
                 this.$rootScope.$on('rocks.clusters.update', function () {
                     _this.reCluster();
                 });
-                // option to turn off picking/building charts
+                // disable picking if you don't need charts
                 if (usePicking) {
-                    // TODO remove when inactive
-                    var handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
-                    handler.setInputAction(function (movement) {
+                    this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+                    this.pickHandlerAction = function (movement) {
+                        // TODO revise cluster pick validation when we decide on format for service
                         var pick = _this.viewer.scene.pick(movement.position);
-                        if (Cesium.defined(pick)) {
+                        if (Cesium.defined(pick) && pick.hasOwnProperty('id') && pick.id.hasOwnProperty('lat')) {
                             _this.queryCluster(pick.id);
                         }
-                    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                    };
+                    this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
                 }
             };
             ClusterService.prototype.toggleClusters = function () {
                 if (this.clustersCollection) {
                     this.clustersCollection.show = !this.clustersCollection.show;
                     this.zoomLevelService.setActive(this.clustersCollection.show);
+                    if (this.clustersCollection.show) {
+                        this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                    }
+                    else {
+                        this.pickHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                    }
                     this.reCluster();
                 }
                 else {

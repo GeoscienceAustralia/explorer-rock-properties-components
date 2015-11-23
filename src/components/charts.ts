@@ -6,9 +6,7 @@ module rpComponents.chartService {
 
     'use strict';
 
-    // CONTROLLER
-    export interface IClusterChartCtrl {
-    }
+    export interface IClusterChartCtrl {}
     export class ClusterChartCtrl implements IClusterChartCtrl {
 
         static $inject = ["$scope", "clusterChartService"];
@@ -19,9 +17,9 @@ module rpComponents.chartService {
 
     }
 
-    // FACTORY
     export interface IClusterChartService {
         buildChart(data: any): any;
+        hideChart(): void;
     }
 
     export class ClusterChartService implements IClusterChartService {
@@ -49,21 +47,17 @@ module rpComponents.chartService {
          *
          */
         public buildChart(data: any): any {
-            //console.log("TODO query service for cluster info for:");
-            //console.log(data);
 
-            // clean up
             document.getElementById("cluster-summary-chart-d3").innerHTML = "";
 
+            // trigger open/display a chart div
             this.$rootScope.$broadcast("chart.update", {
                 targetChartId: "clusterSummaryChart"
             });
 
             /*---------------------------------------- D3 -----------------------------------------*/
-            // eg http://plnkr.co/edit/x1xD82?p=preview
+
             //'resources/mock-service/explorer-cossap-services/service/rock-properties/clusters/',
-
-
 
             d3.json('resources/mock-service/explorer-cossap-services/service/rock-properties/clusters/cluster.json', (error: any, dataset: any) => {
 
@@ -179,7 +173,7 @@ module rpComponents.chartService {
                         .text(property.propertyName);
 
 
-                    // LEGEND PAGINATED
+                    // PAGINATED LEGEND
                     var legendCount: number = property.data.length;
                     var legendWidth: number = 15;
                     var legendSpacing: number = 6;
@@ -189,26 +183,26 @@ module rpComponents.chartService {
                     var totalPages: number;
                     var pageNo: number;
 
-                    if(netLegendHeight / (radius) > 1){
+                    if((netLegendHeight / radius) > 1){
 
-                        legendPerPage = Math.floor(radius/(legendWidth+legendSpacing));
-                        totalPages = Math.ceil(legendCount/legendPerPage);
+                        legendPerPage = Math.floor( radius / (legendWidth + legendSpacing));
+                        totalPages = Math.ceil(legendCount / legendPerPage);
                         pageNo = 1;
 
-                        var startIndex: number = (pageNo-1) * legendPerPage;
+                        var startIndex: number = (pageNo - 1) * legendPerPage;
                         var endIndex: number = startIndex + legendPerPage;
-                        var seriesSubset: any= [];
+                        var dataSubset: any = [];
 
                         for(var i = 0; i < property.data.length; i++){
                             if( i >= startIndex && i < endIndex){
-                                seriesSubset.push(property.data[i]);
+                                dataSubset.push(property.data[i]);
                             }
                         }
 
-                        drawLegend(seriesSubset,legendPerPage,pageNo,totalPages);
+                        drawLegend(dataSubset, legendPerPage, pageNo, totalPages);
                     }
                     else {
-                        drawLegend(property.data, Math.floor(radius/(legendWidth+legendSpacing)), 1, 1);
+                        drawLegend(property.data, Math.floor(radius / (legendWidth + legendSpacing)), 1, 1);
                     }
 
                     /**
@@ -226,7 +220,7 @@ module rpComponents.chartService {
                             .data(data)
                             .enter().append("g")
                             .attr('class','legendg')
-                            .attr("transform", function (d: any, i: any) { return "translate(" + -(width/2.3) + ","+ ((i*(legendWidth+legendSpacing)) - (height / 4)) +")"; });
+                            .attr("transform", function (d: any, i: any) { return "translate(" + -(width / 2.3) + ","+ ((i * (legendWidth + legendSpacing)) - (height / 4)) +")"; });
 
                         var legendRect: any = legend.append("rect")
                             .attr("x", 45)
@@ -241,19 +235,16 @@ module rpComponents.chartService {
                             .attr("dy", ".35em")
                             .style("text-anchor", "start")
                             .text(function (d: any) {
-
-                                // crude calc for truncation - ave 5px per char
+                                // truncate long labels
                                 var charSpace: number = (radius - 20) / 5;
-
                                 if(d.attributeName.length > charSpace)
                                     return d.attributeName.substring(0,charSpace)+'...';
                                 else
                                     return d.attributeName;
                             });
 
-                        // titles, attributes may be truncated
+                        // title tooltips
                         legendRect.append("svg:title").text(function (d: any) {
-
                             var total: number = d3.sum(property.data.map(function(d: any) { return d.count;}));
                             return d.attributeName + " (" + Math.round(1000 * d.count / total) / 10 + "%)";
                         });
@@ -266,20 +257,20 @@ module rpComponents.chartService {
 
                             var pageText: any = svg.append("g")
                                 .attr('class','pageNo')
-                                .attr("transform", "translate(" + (-10) + ","+ ((legendPerPage+1)*(legendWidth+legendSpacing) - (height / 4)) +")");
+                                .attr("transform", "translate(" + (-10) + ","+ ((legendPerPage + 1) * (legendWidth+legendSpacing) - (height / 4)) +")");
 
                             pageText.append('text').text(pageNo+'/'+totalPages)
                                 .attr('dx','.25em');
 
                             var prevtriangle: any = svg.append("g")
                                 .attr('class','prev')
-                                .attr("transform", "translate(" + (-20) + ","+ ((legendPerPage+1.5)*(legendWidth+legendSpacing) - (height / 4)) +")")
+                                .attr("transform", "translate(" + (-20) + ","+ ((legendPerPage + 1.5) * (legendWidth+legendSpacing) - (height / 4)) +")")
                                 .on('click',prevLegend)
                                 .style('cursor','pointer');
 
                             var nexttriangle: any = svg.append("g")
                                 .attr('class','next')
-                                .attr("transform", "translate(" + (0) + ","+ ((legendPerPage+1.5)*(legendWidth+legendSpacing) - (height / 4)) +")")
+                                .attr("transform", "translate(" + (0) + ","+ ((legendPerPage + 1.5) * (legendWidth+legendSpacing) - (height / 4)) +")")
                                 .on('click',nextLegend)
                                 .style('cursor','pointer');
 
@@ -315,20 +306,21 @@ module rpComponents.chartService {
                         svg.select('.prev').remove();
                         svg.select('.next').remove();
 
-                        var startIndex=(pageNo-1)*legendPerPage;
-                        var endIndex=startIndex+legendPerPage;
-                        var seriesSubset: any = []
+                        var startIndex = (pageNo - 1) * legendPerPage;
+                        var endIndex = startIndex + legendPerPage;
+                        var dataSubset: any = []
 
                         for(var i = 0; i < property.data.length;i++){
                             if(i >= startIndex && i < endIndex){
-                                seriesSubset.push(property.data[i]);
+                                dataSubset.push(property.data[i]);
                             }
                         }
 
-                        drawLegend(seriesSubset,legendPerPage,pageNo,totalPages);
+                        drawLegend(dataSubset, legendPerPage, pageNo, totalPages);
                     }
 
                     function nextLegend(){
+
                         pageNo++;
 
                         svg.selectAll("g.legendg").remove();
@@ -336,8 +328,8 @@ module rpComponents.chartService {
                         svg.select('.prev').remove();
                         svg.select('.next').remove();
 
-                        var startIndex=(pageNo-1)*legendPerPage;
-                        var endIndex=startIndex+legendPerPage;
+                        var startIndex = (pageNo - 1) * legendPerPage;
+                        var endIndex = startIndex + legendPerPage;
                         var seriesSubset: any = [];
 
                         for(var i = 0; i < property.data.length; i++){
@@ -345,7 +337,6 @@ module rpComponents.chartService {
                                 seriesSubset.push(property.data[i]);
                             }
                         }
-
                         drawLegend(seriesSubset,legendPerPage,pageNo,totalPages);
                     }
 
@@ -353,18 +344,15 @@ module rpComponents.chartService {
 
             });
 
-
             /*---------------------------------------- /D3 -----------------------------------------*/
 
-
-            document.getElementById("cluster-summary-chart-d3").style.display = 'none';
-
             // DEBUG emulate loading..
+            document.getElementById("cluster-summary-chart-d3").style.display = 'none';
             // chart ready to go
             setTimeout(function(){
                 document.getElementById("cluster-summary-chart-loading").style.display = 'none';
                 document.getElementById("cluster-summary-chart-d3").style.display = 'block';
-            }, 2000);
+            }, 1500);
 
             return;
         }

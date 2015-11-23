@@ -1,8 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 declare var d3: any;
-declare var tweenDash: any;
-declare var transition: any;
 
 /**
  * Simple loading spinner so we're not tied to any img/icon font's

@@ -23,6 +23,8 @@ module rpComponents.clusterService {
     export class ClusterService implements IClusterService {
 
         viewer: any;
+        pickHandler: any;
+        pickHandlerAction: any;
         serviceUrl: string;
         clustersCollection: any;
         summarySpinner: any;
@@ -43,6 +45,12 @@ module rpComponents.clusterService {
             public chartSpinnerService: rpComponents.spinnerService.IChartSpinnerService
         ) {}
 
+        /**
+         *
+         * @param viewer
+         * @param serviceUrl
+         * @param usePicking
+         */
         init(viewer: any, serviceUrl: string, usePicking: boolean): void {
 
             this.viewer = viewer;
@@ -53,20 +61,21 @@ module rpComponents.clusterService {
                 this.reCluster();
             });
 
-            // option to turn off picking/building charts
+            // disable picking if you don't need charts
             if(usePicking){
 
-                // TODO remove when inactive
-                var handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
-                handler.setInputAction((movement: any) => {
+                this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+                this.pickHandlerAction = (movement: any) => {
 
+                    // TODO revise cluster pick validation when we decide on format for service
                     var pick = this.viewer.scene.pick(movement.position);
-                    if (Cesium.defined(pick)) {
+                    if (Cesium.defined(pick) && pick.hasOwnProperty('id') && pick.id.hasOwnProperty('lat')) {
                         this.queryCluster(pick.id);
                     }
-                }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-            }
+                };
 
+                this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+            }
         }
 
         toggleClusters(): void {
@@ -75,6 +84,14 @@ module rpComponents.clusterService {
 
                 this.clustersCollection.show = !this.clustersCollection.show;
                 this.zoomLevelService.setActive(this.clustersCollection.show);
+
+                if(this.clustersCollection.show){
+                    this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                }
+                else {
+                    this.pickHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                }
+
                 this.reCluster();
             }
 
@@ -85,8 +102,6 @@ module rpComponents.clusterService {
 
                 this.zoomLevelService.setActive(true);
                 this.reCluster();
-
-
             }
         }
 
