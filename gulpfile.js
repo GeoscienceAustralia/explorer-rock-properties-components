@@ -40,6 +40,7 @@ gulp.task('scripts', function() {
 gulp.task('watch', function() {
     // We watch both JS and HTML files.
     gulp.watch('src/components/**/*(*.ts|*.html)', ['lint', 'scripts']);
+	gulp.watch('src/templates/*.html', ['lint', 'scripts']);
     gulp.watch('src/css/*.css', ['concatCss']);
     //gulp.watch('scss/*.scss', ['sass']);
 });
@@ -60,7 +61,7 @@ gulp.task('default', ['lint', 'scripts', 'concatCss', 'resources', 'watch']);
 
 function prepareTemplates() {
    return gulp.src('src/templates/**/*.html')
-      .pipe(templateCache('templates.ts',{root:"cesium", module:"exp.cesium.templates", standalone : true,
-       templateHeader:'declare var angular: any; angular.module("<%= module %>"<%= standalone %>).run(["$templateCache", function($templateCache:any) {'}));
+      .pipe(templateCache('templates.ts',{root:"rockprops", module:"explorer.rockproperties.templates", standalone : true,
+       templateHeader:'angular.module("<%= module %>"<%= standalone %>).run(["$templateCache", function($templateCache:any) {'}));
 }
 

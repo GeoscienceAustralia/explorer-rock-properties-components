@@ -1,0 +1,38 @@
+#clusterSummaryChart {
+    padding-top: 20px;
+    margin-left: -10px;
+    min-width: 1250px;
+    min-height: 255px;
+}
+
+.cluster-summary-tooltip {
+    background: #eee;
+    box-shadow: 0 0 5px #999999;
+    border-radius: 3px;
+    color: #333;
+    display: none;
+    font-size: 12px;
+    left: 130px;
+    padding: 10px;
+    position: fixed;
+    text-align: center;
+    top: 95px;
+    width: 180px;
+    z-index: 10;
+}
+
+.cluster-summary-tooltip .attribute {
+    font-weight: bold;
+}
+
+#cluster-summary-chart-loading {
+    position: absolute;
+    left: 50%;
+    margin-left: -50px;
+    top: 50%;
+    margin-top: -50px;
+}
+
+#cluster-summary-chart-d3 {
+    /*display: none !important;*/
+}

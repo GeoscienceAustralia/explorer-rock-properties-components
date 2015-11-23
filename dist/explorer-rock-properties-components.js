@@ -1,4 +1,308 @@
 /// <reference path="../../typings/tsd.d.ts" />
+var rpComponents;
+(function (rpComponents) {
+    var chartService;
+    (function (chartService) {
+        'use strict';
+        var ClusterChartCtrl = (function () {
+            function ClusterChartCtrl($scope, clusterChartService) {
+                this.$scope = $scope;
+                this.clusterChartService = clusterChartService;
+            }
+            ClusterChartCtrl.$inject = ["$scope", "clusterChartService"];
+            return ClusterChartCtrl;
+        })();
+        chartService.ClusterChartCtrl = ClusterChartCtrl;
+        var ClusterChartService = (function () {
+            function ClusterChartService($http, $rootScope) {
+                this.$http = $http;
+                this.$rootScope = $rootScope;
+            }
+            ClusterChartService.prototype.hideChart = function () {
+                this.$rootScope.$broadcast("chart.update", {
+                    targetChartId: false
+                });
+            };
+            /**
+             *
+             * @param cluster
+             *
+             */
+            ClusterChartService.prototype.buildChart = function (data) {
+                //console.log("TODO query service for cluster info for:");
+                //console.log(data);
+                // clean up
+                document.getElementById("cluster-summary-chart-d3").innerHTML = "";
+                this.$rootScope.$broadcast("chart.update", {
+                    targetChartId: "clusterSummaryChart"
+                });
+                /*---------------------------------------- D3 -----------------------------------------*/
+                // eg http://plnkr.co/edit/x1xD82?p=preview
+                //'resources/mock-service/explorer-cossap-services/service/rock-properties/clusters/',
+                d3.json('resources/mock-service/explorer-cossap-services/service/rock-properties/clusters/cluster.json', function (error, dataset) {
+                    // LAYOUT
+                    var minWidth = 1250;
+                    var minHeight = 255;
+                    var numberOfCharts = (dataset.length < 7) ? dataset.length : 4; // use two rows if we get too many properties
+                    var width;
+                    var height;
+                    var padding;
+                    var donutWidth;
+                    if (document.body.clientHeight * 0.35 > minHeight && document.body.clientWidth > minWidth) {
+                        padding = { top: 0, right: 10, bottom: 0, left: 10 };
+                        width = document.body.clientWidth / numberOfCharts - (2 * padding.left + padding.right);
+                        height = document.body.clientHeight * 0.35;
+                        donutWidth = 20;
+                    }
+                    else {
+                        padding = { top: 0, right: 5, bottom: 0, left: 5 };
+                        width = minWidth / numberOfCharts - (2 * padding.left + padding.right);
+                        height = minHeight;
+                        donutWidth = 15;
+                    }
+                    var panelWidth = document.body.clientWidth - (2 * padding.left + padding.right);
+                    var radius = Math.min(width, height) / 2;
+                    // DATA
+                    // build a chart for each property
+                    dataset.forEach(function (property) {
+                        var color = d3.scale.category20();
+                        var svg = d3.select('#cluster-summary-chart-d3')
+                            .append('svg')
+                            .attr('width', width)
+                            .attr('height', height)
+                            .style('margin-left', padding.left + 'px')
+                            .style('margin-right', padding.right + 'px')
+                            .append('g')
+                            .attr('transform', 'translate(' + (width / 2) +
+                            ',' + ((height / 2) + 10) + ')');
+                        var arc = d3.svg.arc()
+                            .innerRadius(radius - donutWidth)
+                            .outerRadius(radius);
+                        var pie = d3.layout.pie()
+                            .value(function (d) { return d.count; })
+                            .sort(null);
+                        var tooltip = d3.select('#cluster-summary-chart-d3')
+                            .append('div')
+                            .attr('class', 'cluster-summary-tooltip');
+                        tooltip.append('div')
+                            .attr('class', 'attribute');
+                        tooltip.append('div')
+                            .attr('class', 'count');
+                        tooltip.append('div')
+                            .attr('class', 'percent');
+                        var path = svg.selectAll('path')
+                            .data(pie(property.data))
+                            .enter()
+                            .append('path')
+                            .attr('d', arc)
+                            .attr('fill', function (d, i) {
+                            return color(d.data.attributeName);
+                        })
+                            .each(function (d) { this._current = d; });
+                        path.on('mouseover', function (d) {
+                            var total = d3.sum(property.data.map(function (d) {
+                                return d.count;
+                            }));
+                            var percent = Math.round(1000 * d.data.count / total) / 10;
+                            tooltip.select('.attribute').html(d.data.attributeName);
+                            tooltip.select('.count').html("Count: " + d.data.count);
+                            tooltip.select('.percent').html("Percent: " + percent + '%');
+                            tooltip.style('display', 'block');
+                        });
+                        path.on('mouseout', function () {
+                            tooltip.style('display', 'none');
+                        });
+                        path.on('mousemove', function (d) {
+                            var x = (d3.event.pageX > panelWidth - 180) ? d3.event.pageX - 180 : d3.event.pageX;
+                            var y = (d3.event.pageY > document.body.clientHeight - 120) ? d3.event.pageY - 100 : d3.event.pageY + 10;
+                            tooltip
+                                .style('top', y + 'px')
+                                .style('left', x + 'px');
+                        });
+                        // title
+                        svg.append("g")
+                            .attr("class", "cluster-summary-chart-title")
+                            .append("text")
+                            .attr("x", 0)
+                            .attr("y", -((height / 2) + 7))
+                            .attr("dy", ".71em")
+                            .style("text-anchor", "middle")
+                            .style("fill", "#000")
+                            .style("font-weight", "bold")
+                            .text(property.propertyName);
+                        // LEGEND PAGINATED
+                        var legendCount = property.data.length;
+                        var legendWidth = 15;
+                        var legendSpacing = 6;
+                        var netLegendHeight = (legendWidth + legendSpacing) * legendCount;
+                        var legendPerPage;
+                        var totalPages;
+                        var pageNo;
+                        if (netLegendHeight / (radius) > 1) {
+                            legendPerPage = Math.floor(radius / (legendWidth + legendSpacing));
+                            totalPages = Math.ceil(legendCount / legendPerPage);
+                            pageNo = 1;
+                            var startIndex = (pageNo - 1) * legendPerPage;
+                            var endIndex = startIndex + legendPerPage;
+                            var seriesSubset = [];
+                            for (var i = 0; i < property.data.length; i++) {
+                                if (i >= startIndex && i < endIndex) {
+                                    seriesSubset.push(property.data[i]);
+                                }
+                            }
+                            drawLegend(seriesSubset, legendPerPage, pageNo, totalPages);
+                        }
+                        else {
+                            drawLegend(property.data, Math.floor(radius / (legendWidth + legendSpacing)), 1, 1);
+                        }
+                        /**
+                         *
+                         * Draws paginated legend if we need multiple pages
+                         *
+                         * @param data
+                         * @param legendPerPage
+                         * @param pageNo
+                         * @param totalPages
+                         */
+                        function drawLegend(data, legendPerPage, pageNo, totalPages) {
+                            var legend = svg.selectAll("g.legendg")
+                                .data(data)
+                                .enter().append("g")
+                                .attr('class', 'legendg')
+                                .attr("transform", function (d, i) { return "translate(" + -(width / 2.3) + "," + ((i * (legendWidth + legendSpacing)) - (height / 4)) + ")"; });
+                            var legendRect = legend.append("rect")
+                                .attr("x", 45)
+                                .attr("width", legendWidth)
+                                .attr("height", legendWidth)
+                                .attr("class", "legend")
+                                .style('fill', function (d, i) { return color(d.attributeName); });
+                            var legendText = legend.append("text")
+                                .attr("x", 65)
+                                .attr("y", 6)
+                                .attr("dy", ".35em")
+                                .style("text-anchor", "start")
+                                .text(function (d) {
+                                // crude calc for truncation - ave 5px per char
+                                var charSpace = (radius - 20) / 5;
+                                if (d.attributeName.length > charSpace)
+                                    return d.attributeName.substring(0, charSpace) + '...';
+                                else
+                                    return d.attributeName;
+                            });
+                            // titles, attributes may be truncated
+                            legendRect.append("svg:title").text(function (d) {
+                                var total = d3.sum(property.data.map(function (d) { return d.count; }));
+                                return d.attributeName + " (" + Math.round(1000 * d.count / total) / 10 + "%)";
+                            });
+                            legendText.append("svg:title").text(function (d) {
+                                var total = d3.sum(property.data.map(function (d) { return d.count; }));
+                                return d.attributeName + " (" + Math.round(1000 * d.count / total) / 10 + "%)";
+                            });
+                            if (totalPages > 1) {
+                                var pageText = svg.append("g")
+                                    .attr('class', 'pageNo')
+                                    .attr("transform", "translate(" + (-10) + "," + ((legendPerPage + 1) * (legendWidth + legendSpacing) - (height / 4)) + ")");
+                                pageText.append('text').text(pageNo + '/' + totalPages)
+                                    .attr('dx', '.25em');
+                                var prevtriangle = svg.append("g")
+                                    .attr('class', 'prev')
+                                    .attr("transform", "translate(" + (-20) + "," + ((legendPerPage + 1.5) * (legendWidth + legendSpacing) - (height / 4)) + ")")
+                                    .on('click', prevLegend)
+                                    .style('cursor', 'pointer');
+                                var nexttriangle = svg.append("g")
+                                    .attr('class', 'next')
+                                    .attr("transform", "translate(" + (0) + "," + ((legendPerPage + 1.5) * (legendWidth + legendSpacing) - (height / 4)) + ")")
+                                    .on('click', nextLegend)
+                                    .style('cursor', 'pointer');
+                                nexttriangle.append('polygon')
+                                    .style('stroke', '#000')
+                                    .style('fill', '#000')
+                                    .attr('points', '0,0, 20,0, 10,10');
+                                prevtriangle.append('polygon')
+                                    .style('stroke', '#000')
+                                    .style('fill', '#000')
+                                    .attr('points', '0,10, 20,10, 10,0');
+                                if (pageNo == totalPages) {
+                                    nexttriangle.style('opacity', '0.3');
+                                    nexttriangle.on('click', '')
+                                        .style('cursor', '');
+                                }
+                                else if (pageNo == 1) {
+                                    prevtriangle.style('opacity', '0.3');
+                                    prevtriangle.on('click', '')
+                                        .style('cursor', '');
+                                }
+                            }
+                        }
+                        function prevLegend() {
+                            pageNo--;
+                            svg.selectAll("g.legendg").remove();
+                            svg.select('.pageNo').remove();
+                            svg.select('.prev').remove();
+                            svg.select('.next').remove();
+                            var startIndex = (pageNo - 1) * legendPerPage;
+                            var endIndex = startIndex + legendPerPage;
+                            var seriesSubset = [];
+                            for (var i = 0; i < property.data.length; i++) {
+                                if (i >= startIndex && i < endIndex) {
+                                    seriesSubset.push(property.data[i]);
+                                }
+                            }
+                            drawLegend(seriesSubset, legendPerPage, pageNo, totalPages);
+                        }
+                        function nextLegend() {
+                            pageNo++;
+                            svg.selectAll("g.legendg").remove();
+                            svg.select('.pageNo').remove();
+                            svg.select('.prev').remove();
+                            svg.select('.next').remove();
+                            var startIndex = (pageNo - 1) * legendPerPage;
+                            var endIndex = startIndex + legendPerPage;
+                            var seriesSubset = [];
+                            for (var i = 0; i < property.data.length; i++) {
+                                if (i >= startIndex && i < endIndex) {
+                                    seriesSubset.push(property.data[i]);
+                                }
+                            }
+                            drawLegend(seriesSubset, legendPerPage, pageNo, totalPages);
+                        }
+                    });
+                });
+                /*---------------------------------------- /D3 -----------------------------------------*/
+                document.getElementById("cluster-summary-chart-d3").style.display = 'none';
+                // DEBUG emulate loading..
+                // chart ready to go
+                setTimeout(function () {
+                    document.getElementById("cluster-summary-chart-loading").style.display = 'none';
+                    document.getElementById("cluster-summary-chart-d3").style.display = 'block';
+                }, 2000);
+                return;
+            };
+            ClusterChartService.$inject = [
+                "$http",
+                "$rootScope"
+            ];
+            return ClusterChartService;
+        })();
+        chartService.ClusterChartService = ClusterChartService;
+        // ng register
+        angular
+            .module('explorer.rockproperties.charts', [])
+            .factory("clusterChartService", ["$http", "$rootScope",
+            function ($http, $rootScope) {
+                return new rpComponents.chartService.ClusterChartService($http, $rootScope);
+            }])
+            .controller("clusterChartCtrl", ClusterChartCtrl)
+            .directive("clusterChartSummary", function () {
+            return {
+                templateUrl: 'rockprops/cluster-summary.html',
+                controller: ClusterChartCtrl,
+                controllerAs: 'clusterChartVM'
+            };
+        });
+    })(chartService = rpComponents.chartService || (rpComponents.chartService = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/tsd.d.ts" />
 /**
  *
  *   Initial shell for single cluster
@@ -44,11 +348,13 @@ var rpComponents;
     (function (clusterService) {
         'use strict';
         var ClusterService = (function () {
-            function ClusterService($http, $rootScope, zoomLevelService) {
+            function ClusterService($http, $rootScope, zoomLevelService, clusterChartService, chartSpinnerService) {
                 var _this = this;
                 this.$http = $http;
                 this.$rootScope = $rootScope;
                 this.zoomLevelService = zoomLevelService;
+                this.clusterChartService = clusterChartService;
+                this.chartSpinnerService = chartSpinnerService;
                 /**
                  *
                  * We get a performance benefit when we use fewer primitives/collections to draw multiple static geometries.
@@ -72,7 +378,7 @@ var rpComponents;
                     });
                 };
             }
-            ClusterService.prototype.init = function (viewer, serviceUrl) {
+            ClusterService.prototype.init = function (viewer, serviceUrl, usePicking) {
                 var _this = this;
                 this.viewer = viewer;
                 this.zoomLevelService.viewer = viewer;
@@ -80,9 +386,19 @@ var rpComponents;
                 this.$rootScope.$on('rocks.clusters.update', function () {
                     _this.reCluster();
                 });
+                // option to turn off picking/building charts
+                if (usePicking) {
+                    // TODO remove when inactive
+                    var handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+                    handler.setInputAction(function (movement) {
+                        var pick = _this.viewer.scene.pick(movement.position);
+                        if (Cesium.defined(pick)) {
+                            _this.queryCluster(pick.id);
+                        }
+                    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                }
             };
             ClusterService.prototype.toggleClusters = function () {
-                var _this = this;
                 if (this.clustersCollection) {
                     this.clustersCollection.show = !this.clustersCollection.show;
                     this.zoomLevelService.setActive(this.clustersCollection.show);
@@ -93,15 +409,6 @@ var rpComponents;
                     this.viewer.scene.primitives.add(this.clustersCollection);
                     this.zoomLevelService.setActive(true);
                     this.reCluster();
-                    var handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
-                    handler.setInputAction(function (movement) {
-                        var pick = _this.viewer.scene.pick(movement.position);
-                        //if (Cesium.defined(pick) && (pick.id === 'hello id')) {
-                        if (Cesium.defined(pick)) {
-                            console.log('id: ');
-                            console.log(pick.id);
-                        }
-                    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
                 }
             };
             /**
@@ -128,13 +435,40 @@ var rpComponents;
             };
             /**
              *
-             *
+             * Gets a summary of cluster data to pass to chartService.
              *
              * @param cluster
              */
-            ClusterService.prototype.getClusterInfo = function (cluster) {
-                console.log("TODO query service for cluster info for:");
-                console.log(cluster);
+            ClusterService.prototype.queryCluster = function (cluster) {
+                var _this = this;
+                //  spinner for summary chart load
+                if (this.summarySpinner) {
+                    document.getElementById("cluster-summary-chart-loading").style.display = 'block';
+                }
+                else {
+                    this.summarySpinner = this.chartSpinnerService.addSpinner({
+                        width: 100,
+                        height: 100,
+                        container: "#cluster-summary-chart-loading",
+                        id: "chart-spinner"
+                    });
+                    this.summarySpinner();
+                }
+                // debug
+                this.$http({
+                    method: 'GET',
+                    url: this.serviceUrl + 'cluster-summary.json',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    data: {
+                        targetCluster: cluster
+                    }
+                }).then(function (response) {
+                    if (response.hasOwnProperty('data')) {
+                        _this.clusterChartService.buildChart(response.data);
+                    }
+                });
             };
             ClusterService.prototype.drawClusters = function (sphereInstances, labelCollection) {
                 this.clustersCollection.removeAll();
@@ -183,19 +517,30 @@ var rpComponents;
             };
             ClusterService.prototype.computeClusterAttributes = function (count) {
                 if (count < 10) {
-                    return { size: 10000 * this.zoomLevelService.nextIndex, color: Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5) };
+                    return {
+                        size: 10000 * this.zoomLevelService.nextIndex,
+                        color: Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5)
+                    };
                 }
                 else if (count >= 10 && count < 1000) {
-                    return { size: 10000 * this.zoomLevelService.nextIndex, color: Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5) };
+                    return {
+                        size: 10000 * this.zoomLevelService.nextIndex,
+                        color: Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5)
+                    };
                 }
                 else {
-                    return { size: 10000 * this.zoomLevelService.nextIndex, color: Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5) };
+                    return {
+                        size: 10000 * this.zoomLevelService.nextIndex,
+                        color: Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5)
+                    };
                 }
             };
             ClusterService.$inject = [
                 "$http",
                 "$rootScope",
-                "zoomLevelService"
+                "zoomLevelService",
+                "clusterChartService",
+                "chartSpinnerService"
             ];
             return ClusterService;
         })();
@@ -203,11 +548,62 @@ var rpComponents;
         // ng register
         angular
             .module('explorer.rockproperties.clusters', [])
-            .factory("clusterService", ["$http", "$rootScope", "zoomLevelService",
-            function ($http, $rootScope, zoomLevelService) {
-                return new rpComponents.clusterService.ClusterService($http, $rootScope, zoomLevelService);
+            .factory("clusterService", ["$http", "$rootScope", "zoomLevelService", "clusterChartService", "chartSpinnerService",
+            function ($http, $rootScope, zoomLevelService, clusterChartService, chartSpinnerService) {
+                return new rpComponents.clusterService.ClusterService($http, $rootScope, zoomLevelService, clusterChartService, chartSpinnerService);
             }]);
     })(clusterService = rpComponents.clusterService || (rpComponents.clusterService = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/tsd.d.ts" />
+/**
+ * Simple loading spinner so we're not tied to any img/icon font's
+ */
+var rpComponents;
+(function (rpComponents) {
+    var spinnerService;
+    (function (spinnerService) {
+        'use strict';
+        var ChartSpinnerService = (function () {
+            function ChartSpinnerService() {
+            }
+            ChartSpinnerService.prototype.addSpinner = function (config) {
+                return function () {
+                    var radius = Math.min(config.width, config.height) / 2;
+                    var tau = 2 * Math.PI;
+                    var arc = d3.svg.arc()
+                        .innerRadius(radius * 0.5)
+                        .outerRadius(radius * 0.9)
+                        .startAngle(0);
+                    var svg = d3.select(config.container).append("svg")
+                        .attr("id", config.id)
+                        .attr("width", config.width)
+                        .attr("height", config.height)
+                        .append("g")
+                        .attr("transform", "translate(" + config.width / 2 + "," + config.height / 2 + ")");
+                    svg.append("path")
+                        .datum({ endAngle: 0.33 * tau })
+                        .style("fill", "#4D4D4D")
+                        .attr("d", arc)
+                        .call(spin, 1500);
+                    function spin(selection, duration) {
+                        selection.transition()
+                            .ease("linear")
+                            .duration(duration)
+                            .attrTween("transform", function () {
+                            return d3.interpolateString("rotate(0)", "rotate(360)");
+                        });
+                        setTimeout(function () { spin(selection, duration); }, duration);
+                    }
+                };
+            };
+            return ChartSpinnerService;
+        })();
+        spinnerService.ChartSpinnerService = ChartSpinnerService;
+        // ng register
+        angular
+            .module('explorer.rockproperties.spinner', [])
+            .factory("chartSpinnerService", [function () { return new rpComponents.spinnerService.ChartSpinnerService(); }]);
+    })(spinnerService = rpComponents.spinnerService || (rpComponents.spinnerService = {}));
 })(rpComponents || (rpComponents = {}));
 /// <reference path="../../typings/tsd.d.ts" />
 /**
@@ -315,3 +711,4 @@ var rpComponents;
             function ($rootScope) { return new rpComponents.zoom.ZoomLevelService($rootScope); }]);
     })(zoom = rpComponents.zoom || (rpComponents.zoom = {}));
 })(rpComponents || (rpComponents = {}));
+angular.module("explorer.rockproperties.templates", []).run(["$templateCache", function ($templateCache) { $templateCache.put("rockprops/cluster-summary.html", "<div id=\"clusterSummaryChart\" ng-show=\"cossapChartState.targetChartId == \'clusterSummaryChart\'\">\n\n	<div class=\"btn-group\" style=\"position: absolute;right: 10px;top: 10px;\">\n		<button type=\"button\" class=\"btn btn-default\" title=\"Close graphs\" ng-click=\"clusterChartVM.clusterChartService.hideChart()\">\n			<i class=\"fa fa-times-circle\" role=\"presentation\" style=\"font-size:16px; color:black\"></i>\n		</button>\n	</div>\n\n\n	<div id=\"cluster-summary-chart-d3\"></div>\n\n	<div id=\"cluster-summary-chart-loading\"></div>\n\n</div>"); }]);

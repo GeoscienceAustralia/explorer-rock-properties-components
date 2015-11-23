@@ -25,22 +25,25 @@ module rpComponents.clusterService {
         viewer: any;
         serviceUrl: string;
         clustersCollection: any;
+        summarySpinner: any;
 
         static $inject = [
             "$http",
             "$rootScope",
-            "zoomLevelService"
+            "zoomLevelService",
+            "clusterChartService",
+            "chartSpinnerService"
         ];
 
         constructor(
             public $http: ng.IHttpService,
             public $rootScope: ng.IRootScopeService,
-            public zoomLevelService: rpComponents.zoom.IZoomLevelService
-        ) {
+            public zoomLevelService: rpComponents.zoom.IZoomLevelService,
+            public clusterChartService: rpComponents.chartService.IClusterChartService,
+            public chartSpinnerService: rpComponents.spinnerService.IChartSpinnerService
+        ) {}
 
-        }
-
-        init(viewer: any, serviceUrl: string): void {
+        init(viewer: any, serviceUrl: string, usePicking: boolean): void {
 
             this.viewer = viewer;
             this.zoomLevelService.viewer = viewer;
@@ -49,6 +52,21 @@ module rpComponents.clusterService {
             this.$rootScope.$on('rocks.clusters.update', () => {
                 this.reCluster();
             });
+
+            // option to turn off picking/building charts
+            if(usePicking){
+
+                // TODO remove when inactive
+                var handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+                handler.setInputAction((movement: any) => {
+
+                    var pick = this.viewer.scene.pick(movement.position);
+                    if (Cesium.defined(pick)) {
+                        this.queryCluster(pick.id);
+                    }
+                }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+            }
+
         }
 
         toggleClusters(): void {
@@ -68,16 +86,7 @@ module rpComponents.clusterService {
                 this.zoomLevelService.setActive(true);
                 this.reCluster();
 
-                var handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
-                handler.setInputAction((movement: any) => {
-                    var pick = this.viewer.scene.pick(movement.position);
 
-                    //if (Cesium.defined(pick) && (pick.id === 'hello id')) {
-                    if (Cesium.defined(pick)) {
-                        console.log('id: ');
-                        console.log(pick.id);
-                    }
-                }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
             }
         }
 
@@ -107,13 +116,43 @@ module rpComponents.clusterService {
 
         /**
          *
-         *
+         * Gets a summary of cluster data to pass to chartService.
          *
          * @param cluster
          */
-        public getClusterInfo(cluster: rpComponents.cluster.ICluster): any {
-            console.log("TODO query service for cluster info for:");
-            console.log(cluster);
+        public queryCluster(cluster: rpComponents.cluster.ICluster): void {
+
+            //  spinner for summary chart load
+            if(this.summarySpinner){
+                document.getElementById("cluster-summary-chart-loading").style.display = 'block';
+            }
+            else {
+                this.summarySpinner = this.chartSpinnerService.addSpinner({
+                    width: 100,
+                    height: 100,
+                    container: "#cluster-summary-chart-loading",
+                    id: "chart-spinner"
+                });
+                this.summarySpinner();
+            }
+
+            // debug
+            this.$http({
+                method: 'GET',
+                url: this.serviceUrl + 'cluster-summary.json',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                data: {
+                    targetCluster: cluster
+                }
+            }).then((response: any) => {
+
+                if(response.hasOwnProperty('data')){
+                    this.clusterChartService.buildChart(response.data);
+                }
+            });
+
         }
 
         /**
@@ -208,13 +247,22 @@ module rpComponents.clusterService {
         computeClusterAttributes(count: number): any {
 
             if(count < 10){
-                 return {size: 10000 * this.zoomLevelService.nextIndex, color: Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5) };
+                 return {
+                     size: 10000 * this.zoomLevelService.nextIndex,
+                     color: Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5)
+                 };
             }
             else if(count >= 10 && count < 1000){
-                return {size: 10000  * this.zoomLevelService.nextIndex, color: Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5) };
+                return {
+                    size: 10000  * this.zoomLevelService.nextIndex,
+                    color: Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5)
+                };
             }
             else {
-                return {size: 10000  * this.zoomLevelService.nextIndex, color: Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5) };
+                return {
+                    size: 10000  * this.zoomLevelService.nextIndex,
+                    color: Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5)
+                };
             }
         }
     }
@@ -222,8 +270,21 @@ module rpComponents.clusterService {
     // ng register
     angular
         .module('explorer.rockproperties.clusters', [])
-        .factory("clusterService", ["$http", "$rootScope", "zoomLevelService",
-            ($http: ng.IHttpService, $rootScope: ng.IRootScopeService, zoomLevelService: rpComponents.zoom.IZoomLevelService) =>
-                new rpComponents.clusterService.ClusterService($http, $rootScope, zoomLevelService)]);
+        .factory("clusterService", ["$http", "$rootScope", "zoomLevelService", "clusterChartService", "chartSpinnerService",
+            (
+                $http: ng.IHttpService,
+                $rootScope: ng.IRootScopeService,
+                zoomLevelService: rpComponents.zoom.IZoomLevelService,
+                clusterChartService: rpComponents.chartService.IClusterChartService,
+                chartSpinnerService: rpComponents.spinnerService.IChartSpinnerService
+            ) =>
+
+                new rpComponents.clusterService.ClusterService(
+                    $http,
+                    $rootScope,
+                    zoomLevelService,
+                    clusterChartService,
+                    chartSpinnerService
+                )]);
 
 }
