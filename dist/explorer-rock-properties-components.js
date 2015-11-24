@@ -546,7 +546,8 @@ var rpComponents;
                     fillColor: Cesium.Color.BLACK,
                     outlineColor: Cesium.Color.RED,
                     font: '30px arial, sans-serif',
-                    horizontalOrigin: Cesium.HorizontalOrigin.CENTER //,
+                    horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                    id: cluster
                 };
             };
             ClusterService.prototype.computeClusterAttributes = function (count) {
