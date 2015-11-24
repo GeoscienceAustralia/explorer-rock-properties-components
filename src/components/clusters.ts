@@ -271,7 +271,7 @@ module rpComponents.clusterService {
                 attributes : {
                     color : Cesium.ColorGeometryInstanceAttribute.fromColor(clusterProps.color)
                 },
-                id: cluster // for picking
+                id: cluster
             });
 
             return sphereInstance;
@@ -294,7 +294,7 @@ module rpComponents.clusterService {
 
         computeClusterAttributes(count: number): any {
 
-            if(count < 10){
+            if(count < 100){
                  return {
                      size: 10000 * this.zoomLevelService.nextIndex,
                      color: Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5)

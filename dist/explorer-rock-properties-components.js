@@ -534,7 +534,7 @@ var rpComponents;
                     attributes: {
                         color: Cesium.ColorGeometryInstanceAttribute.fromColor(clusterProps.color)
                     },
-                    id: cluster // for picking
+                    id: cluster
                 });
                 return sphereInstance;
             };
@@ -551,7 +551,7 @@ var rpComponents;
                 };
             };
             ClusterService.prototype.computeClusterAttributes = function (count) {
-                if (count < 10) {
+                if (count < 100) {
                     return {
                         size: 10000 * this.zoomLevelService.nextIndex,
                         color: Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5)
@@ -746,4 +746,4 @@ var rpComponents;
             function ($rootScope) { return new rpComponents.zoom.ZoomLevelService($rootScope); }]);
     })(zoom = rpComponents.zoom || (rpComponents.zoom = {}));
 })(rpComponents || (rpComponents = {}));
-angular.module("explorer.rockproperties.templates", []).run(["$templateCache", function ($templateCache) { $templateCache.put("rockprops/cluster-summary.html", "<div id=\"clusterSummaryChart\" ng-show=\"cossapChartState.targetChartId == \'clusterSummaryChart\'\">\n\n	<div class=\"btn-group\" style=\"position: absolute;right: 10px;top: 10px;\">\n		<button type=\"button\" class=\"btn btn-default\" title=\"Close graphs\" ng-click=\"clusterChartVM.clusterChartService.hideChart(); clusterChartVM.clusterService.clearHighlighted();\">\n			<i class=\"fa fa-times-circle\" role=\"presentation\" style=\"font-size:16px; color:black\"></i>\n		</button>\n	</div>\n\n\n	<div id=\"cluster-summary-chart-d3\"></div>\n\n	<div id=\"cluster-summary-chart-loading\"></div>\n\n</div>"); }]);
+angular.module("explorer.rockproperties.templates", []).run(["$templateCache", function ($templateCache) { $templateCache.put("rockprops/cluster-summary.html", "<div id=\"clusterSummaryChart\" ng-show=\"cossapChartState.targetChartId == \'clusterSummaryChart\'\">\n\n	<div class=\"btn-group\" style=\"position: absolute;right: 10px;top: 10px;\">\n		<button type=\"button\" class=\"btn btn-default\" title=\"Close charts\" ng-click=\"clusterChartVM.clusterChartService.hideChart(); clusterChartVM.clusterService.clearHighlighted();\">\n			<i class=\"fa fa-times-circle\" role=\"presentation\" style=\"font-size:16px; color:black\"></i>\n		</button>\n	</div>\n\n	<div id=\"cluster-summary-chart-d3\"></div>\n	<div id=\"cluster-summary-chart-loading\"></div>\n\n</div>"); }]);

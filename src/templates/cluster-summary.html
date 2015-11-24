@@ -1,14 +1,12 @@
 <div id="clusterSummaryChart" ng-show="cossapChartState.targetChartId == 'clusterSummaryChart'">
 
 	<div class="btn-group" style="position: absolute;right: 10px;top: 10px;">
-		<button type="button" class="btn btn-default" title="Close graphs" ng-click="clusterChartVM.clusterChartService.hideChart(); clusterChartVM.clusterService.clearHighlighted();">
+		<button type="button" class="btn btn-default" title="Close charts" ng-click="clusterChartVM.clusterChartService.hideChart(); clusterChartVM.clusterService.clearHighlighted();">
 			<i class="fa fa-times-circle" role="presentation" style="font-size:16px; color:black"></i>
 		</button>
 	</div>
 
-
 	<div id="cluster-summary-chart-d3"></div>
-
 	<div id="cluster-summary-chart-loading"></div>
 
 </div>
