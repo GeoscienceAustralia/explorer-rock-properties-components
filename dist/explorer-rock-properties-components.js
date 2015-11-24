@@ -5,11 +5,12 @@ var rpComponents;
     (function (chartService) {
         'use strict';
         var ClusterChartCtrl = (function () {
-            function ClusterChartCtrl($scope, clusterChartService) {
+            function ClusterChartCtrl($scope, clusterChartService, clusterService) {
                 this.$scope = $scope;
                 this.clusterChartService = clusterChartService;
+                this.clusterService = clusterService;
             }
-            ClusterChartCtrl.$inject = ["$scope", "clusterChartService"];
+            ClusterChartCtrl.$inject = ["$scope", "clusterChartService", "clusterService"];
             return ClusterChartCtrl;
         })();
         chartService.ClusterChartCtrl = ClusterChartCtrl;
@@ -396,10 +397,32 @@ var rpComponents;
                         // TODO revise cluster pick validation when we decide on format for service
                         var pick = _this.viewer.scene.pick(movement.position);
                         if (Cesium.defined(pick) && pick.hasOwnProperty('id') && pick.id.hasOwnProperty('lat')) {
-                            _this.queryCluster(pick.id);
+                            //if(this.targetId) this.setHighlighted(this.targetId, false);
+                            _this.clearHighlighted();
+                            _this.targetId = pick.id;
+                            _this.queryCluster(_this.targetId);
+                            _this.setHighlighted(_this.targetId, true);
                         }
                     };
                     this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                }
+            };
+            ClusterService.prototype.setHighlighted = function (id, highlight) {
+                var attributes = this.clusterPrimitive.getGeometryInstanceAttributes(id);
+                if (attributes && highlight) {
+                    attributes.prevColor = attributes.color;
+                    attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#F5ED05').withAlpha(1));
+                }
+                //else if(attributes && attributes.hasOwnProperty('prevColor')) {
+                //    attributes.color = attributes.prevColor;
+                //}
+            };
+            ClusterService.prototype.clearHighlighted = function () {
+                if (this.targetId) {
+                    var attributes = this.clusterPrimitive.getGeometryInstanceAttributes(this.targetId);
+                    if (attributes && attributes.hasOwnProperty('prevColor')) {
+                        attributes.color = attributes.prevColor;
+                    }
                 }
             };
             ClusterService.prototype.toggleClusters = function () {
@@ -482,13 +505,14 @@ var rpComponents;
             };
             ClusterService.prototype.drawClusters = function (sphereInstances, labelCollection) {
                 this.clustersCollection.removeAll();
-                this.clustersCollection.add(new Cesium.Primitive({
+                this.clusterPrimitive = new Cesium.Primitive({
                     geometryInstances: sphereInstances,
                     appearance: new Cesium.PerInstanceColorAppearance({
                         translucent: true,
                         closed: true
                     })
-                }));
+                });
+                this.clustersCollection.add(this.clusterPrimitive);
                 this.clustersCollection.add(labelCollection);
             };
             ClusterService.prototype.buildSphereInstance = function (cluster) {
@@ -721,4 +745,4 @@ var rpComponents;
             function ($rootScope) { return new rpComponents.zoom.ZoomLevelService($rootScope); }]);
     })(zoom = rpComponents.zoom || (rpComponents.zoom = {}));
 })(rpComponents || (rpComponents = {}));
-angular.module("explorer.rockproperties.templates", []).run(["$templateCache", function ($templateCache) { $templateCache.put("rockprops/cluster-summary.html", "<div id=\"clusterSummaryChart\" ng-show=\"cossapChartState.targetChartId == \'clusterSummaryChart\'\">\n\n	<div class=\"btn-group\" style=\"position: absolute;right: 10px;top: 10px;\">\n		<button type=\"button\" class=\"btn btn-default\" title=\"Close graphs\" ng-click=\"clusterChartVM.clusterChartService.hideChart()\">\n			<i class=\"fa fa-times-circle\" role=\"presentation\" style=\"font-size:16px; color:black\"></i>\n		</button>\n	</div>\n\n\n	<div id=\"cluster-summary-chart-d3\"></div>\n\n	<div id=\"cluster-summary-chart-loading\"></div>\n\n</div>"); }]);
+angular.module("explorer.rockproperties.templates", []).run(["$templateCache", function ($templateCache) { $templateCache.put("rockprops/cluster-summary.html", "<div id=\"clusterSummaryChart\" ng-show=\"cossapChartState.targetChartId == \'clusterSummaryChart\'\">\n\n	<div class=\"btn-group\" style=\"position: absolute;right: 10px;top: 10px;\">\n		<button type=\"button\" class=\"btn btn-default\" title=\"Close graphs\" ng-click=\"clusterChartVM.clusterChartService.hideChart(); clusterChartVM.clusterService.clearHighlighted();\">\n			<i class=\"fa fa-times-circle\" role=\"presentation\" style=\"font-size:16px; color:black\"></i>\n		</button>\n	</div>\n\n\n	<div id=\"cluster-summary-chart-d3\"></div>\n\n	<div id=\"cluster-summary-chart-loading\"></div>\n\n</div>"); }]);

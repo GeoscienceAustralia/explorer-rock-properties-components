@@ -9,10 +9,11 @@ module rpComponents.chartService {
     export interface IClusterChartCtrl {}
     export class ClusterChartCtrl implements IClusterChartCtrl {
 
-        static $inject = ["$scope", "clusterChartService"];
+        static $inject = ["$scope", "clusterChartService", "clusterService"];
         constructor(
             public $scope: ng.IScope,
-            public clusterChartService: rpComponents.chartService.IClusterChartService
+            public clusterChartService: rpComponents.chartService.IClusterChartService,
+            public clusterService: rpComponents.clusterService.IClusterService
         ){}
 
     }

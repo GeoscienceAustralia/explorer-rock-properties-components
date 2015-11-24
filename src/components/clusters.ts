@@ -18,6 +18,8 @@ module rpComponents.clusterService {
         buildSphereInstance(cluster: rpComponents.cluster.ICluster): any;
         buildLabel(cluster: rpComponents.cluster.ICluster): any;
         drawClusters(sphereInstances: any, labelCollection: any): void;
+        setHighlighted(id: any, highlight: boolean): void;
+        clearHighlighted(): void;
     }
 
     export class ClusterService implements IClusterService {
@@ -26,7 +28,9 @@ module rpComponents.clusterService {
         pickHandler: any;
         pickHandlerAction: any;
         serviceUrl: string;
+        clusterPrimitive: any;
         clustersCollection: any;
+        targetId: any;
         summarySpinner: any;
 
         static $inject = [
@@ -70,11 +74,39 @@ module rpComponents.clusterService {
                     // TODO revise cluster pick validation when we decide on format for service
                     var pick = this.viewer.scene.pick(movement.position);
                     if (Cesium.defined(pick) && pick.hasOwnProperty('id') && pick.id.hasOwnProperty('lat')) {
-                        this.queryCluster(pick.id);
+
+                        //if(this.targetId) this.setHighlighted(this.targetId, false);
+
+                        this.clearHighlighted();
+                        this.targetId = pick.id;
+                        this.queryCluster(this.targetId);
+                        this.setHighlighted(this.targetId, true);
                     }
                 };
 
                 this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+            }
+        }
+
+        setHighlighted(id: any, highlight: boolean){
+
+            var attributes = this.clusterPrimitive.getGeometryInstanceAttributes(id);
+
+            if(attributes && highlight){
+                attributes.prevColor = attributes.color;
+                attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#F5ED05').withAlpha(1));
+            }
+            //else if(attributes && attributes.hasOwnProperty('prevColor')) {
+            //    attributes.color = attributes.prevColor;
+            //}
+        }
+
+        clearHighlighted(){
+            if(this.targetId){
+                var attributes = this.clusterPrimitive.getGeometryInstanceAttributes(this.targetId);
+                if(attributes && attributes.hasOwnProperty('prevColor')) {
+                    attributes.color = attributes.prevColor;
+                }
             }
         }
 
@@ -203,14 +235,14 @@ module rpComponents.clusterService {
         drawClusters(sphereInstances: any, labelCollection: any): void {
 
             this.clustersCollection.removeAll();
-            this.clustersCollection.add(new Cesium.Primitive({
+            this.clusterPrimitive = new Cesium.Primitive({
                 geometryInstances : sphereInstances,
                 appearance : new Cesium.PerInstanceColorAppearance({
                     translucent : true,
                     closed : true
                 })
-            }));
-
+            });
+            this.clustersCollection.add(this.clusterPrimitive);
             this.clustersCollection.add(labelCollection);
         }
 
