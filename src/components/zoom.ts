@@ -137,7 +137,6 @@ module rpComponents.zoom {
 
     }
 
-    // ng register
     angular
         .module('explorer.rockproperties.zoom', [])
         .factory("zoomLevelService", ["$rootScope",

@@ -1,0 +1,47 @@
+<div>
+
+	<div class="rocks-accordion">
+		<div class="rocks-toggle-button" title="Show/hide cluster features">
+			<input type="checkbox" ng-model="controlPanelVM.rocksPanelService.clustersEnabled" ng-change="controlPanelVM.rocksPanelService.toggleClusters()" />
+		</div>
+		<button class="title" ng-click="controlPanelVM.setTargetPanel('clusterFeatures')">
+			<i class="fa fa-{{ controlPanelVM.targetPanel == 'clusterFeatures' ? 'minus' : 'plus' }}"></i>
+			Cluster Features
+		</button>
+	</div>
+	<div class="rocks-accordion-content" ng-show="controlPanelVM.targetPanel == 'clusterFeatures'">
+
+		<rocks-cluster-filters></rocks-cluster-filters>
+
+	</div>
+
+	<div class="rocks-accordion">
+		<div class="rocks-toggle-button" title="Show/hide point features WMS layer">
+			<input type="checkbox" ng-model="controlPanelVM.rocksPanelService.pointsEnabled" ng-change="controlPanelVM.rocksPanelService.togglePoints()" />
+		</div>
+		<div class="title" ng-click="controlPanelVM.setTargetPanel('pointFeatures')">
+			<i class="fa fa-{{ controlPanelVM.targetPanel == 'pointFeatures' ? 'minus' : 'plus' }}"></i>
+			Point Features (WMS)
+		</div>
+	</div>
+
+	<div class="rocks-accordion-content" ng-show="controlPanelVM.targetPanel == 'pointFeatures'">
+
+		<rocks-wms-points-legend></rocks-wms-points-legend>
+
+	</div>
+
+	<div class="rocks-accordion">
+		<div class="title w100" ng-click="controlPanelVM.setTargetPanel('clipShip')">
+			<i class="fa fa-{{ controlPanelVM.targetPanel == 'clipShip' ? 'minus' : 'plus' }}"></i>
+			Download Rock Property Data
+		</div>
+	</div>
+
+	<div class="rocks-accordion-content" ng-show="controlPanelVM.targetPanel == 'clipShip'">
+
+		<rocks-clip-ship></rocks-clip-ship>
+
+	</div>
+
+</div>

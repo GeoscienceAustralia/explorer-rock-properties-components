@@ -9,11 +9,11 @@ module rpComponents.spinnerService {
 
     'use strict';
 
-    export interface IChartSpinnerService {
+    export interface ILoadingSpinnerService {
         addSpinner(config: any): any;
     }
 
-    export class ChartSpinnerService implements IChartSpinnerService {
+    export class LoadingSpinnerService implements ILoadingSpinnerService {
 
         addSpinner(config: any): any {
 
@@ -53,8 +53,7 @@ module rpComponents.spinnerService {
         }
     }
 
-    // ng register
     angular
         .module('explorer.rockproperties.spinner', [])
-        .factory("chartSpinnerService", [() => new rpComponents.spinnerService.ChartSpinnerService()]);
+        .factory("loadingSpinnerService", [() => new rpComponents.spinnerService.LoadingSpinnerService()]);
 }

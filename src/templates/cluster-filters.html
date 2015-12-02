@@ -1,0 +1,41 @@
+
+<!--
+
+TODO plug into rock props filter service
+
+-->
+
+<h5>Filters:</h5>
+
+<div ng-repeat="filter in rocksClusterFilterVM.rocksFiltersService.filters" style="padding-top:7px;position:relative; overflow-x: hidden;overflow-y: auto;">
+
+	<label style="font-size: 11px;" title="{{filter.filterLabel}}">{{filter.filterLabel}}</label>
+	<select
+			ng-change="filterChanged(filter.filterType, filter.SelectedOption)"
+			ng-model="filter.SelectedOption"
+			name="filter.filterType"
+			ng-options="option as option for option in filter.filterOptions"
+			ng-class='form-control'
+			class='filter-input'
+			style="float:left;width:100%;position:relative;">
+		<option value="" selected>--select--</option>
+	</select>
+
+</div>
+
+<div style="text-align: center;">
+	<a class="btn btn-default" style="margin: 10px;" ng-click="applyFilters()" href="javascript:;" ng-disabled="!rocksClusterFilterVM.rocksPanelService.clustersEnabled">
+		<i class="fa fa-filter fa-lg"></i>
+		Apply
+	</a>
+
+	<a class="btn btn-default" style="margin: 10px;" ng-click="clearFilters()" href="javascript:;" ng-disabled="!rocksClusterFilterVM.rocksPanelService.clustersEnabled">
+		<i class="fa fa-remove fa-lg"></i>
+		Clear
+	</a>
+
+	<p ng-show="filterResultCount()" style="text-align: left; margin: 10px; font-size: 14px;">
+		<strong>Record Count: </strong>
+		14320
+	</p>
+</div>

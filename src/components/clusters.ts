@@ -6,13 +6,26 @@ module rpComponents.clusterService {
 
     'use strict';
 
+    export interface IRocksClusterFilterCtrl {}
+    export class RocksClusterFilterCtrl implements IRocksClusterFilterCtrl {
+
+        static $inject = ["$scope", "clusterService", "rocksPanelService", "rocksFiltersService"];
+        constructor(
+            public $scope: ng.IScope,
+            public clusterService: rpComponents.clusterService.IClusterService,
+            public rocksPanelService: rpComponents.controlPanel.IRocksPanelService,
+            public rocksFiltersService: rpComponents.filters.IRocksFiltersService
+        ){}
+    }
+
     export interface IClusterService {
 
         viewer: any;
         serviceUrl: string;
         clustersCollection: any;
 
-        toggleClusters(): void;
+        init(viewer: any): void;
+        toggleClusters(): boolean;
         getClusters(heightIndex: number, extent: any): [rpComponents.cluster.ICluster];
         reCluster(): void;
         buildSphereInstance(cluster: rpComponents.cluster.ICluster): any;
@@ -38,7 +51,8 @@ module rpComponents.clusterService {
             "$rootScope",
             "zoomLevelService",
             "clusterChartService",
-            "chartSpinnerService"
+            "loadingSpinnerService",
+            "rocksConfigService"
         ];
 
         constructor(
@@ -46,7 +60,8 @@ module rpComponents.clusterService {
             public $rootScope: ng.IRootScopeService,
             public zoomLevelService: rpComponents.zoom.IZoomLevelService,
             public clusterChartService: rpComponents.chartService.IClusterChartService,
-            public chartSpinnerService: rpComponents.spinnerService.IChartSpinnerService
+            public loadingSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
+            public rocksConfigService: rpComponents.config.IRocksConfigService
         ) {}
 
         /**
@@ -55,18 +70,18 @@ module rpComponents.clusterService {
          * @param serviceUrl
          * @param usePicking
          */
-        init(viewer: any, serviceUrl: string, usePicking: boolean): void {
+        init(viewer: any): void {
 
             this.viewer = viewer;
             this.zoomLevelService.viewer = viewer;
-            this.serviceUrl = serviceUrl;
+            this.serviceUrl = this.rocksConfigService.config.clusterServiceUrl;
 
             this.$rootScope.$on('rocks.clusters.update', () => {
                 this.reCluster();
             });
 
             // disable picking if you don't need charts
-            if(usePicking){
+            if(this.rocksConfigService.config.useClusterPicking){
 
                 this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
                 this.pickHandlerAction = (movement: any) => {
@@ -96,9 +111,6 @@ module rpComponents.clusterService {
                 attributes.prevColor = attributes.color;
                 attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#F5ED05').withAlpha(1));
             }
-            //else if(attributes && attributes.hasOwnProperty('prevColor')) {
-            //    attributes.color = attributes.prevColor;
-            //}
         }
 
         clearHighlighted(){
@@ -110,7 +122,7 @@ module rpComponents.clusterService {
             }
         }
 
-        toggleClusters(): void {
+        toggleClusters(): boolean {
 
             if(this.clustersCollection){
 
@@ -135,6 +147,8 @@ module rpComponents.clusterService {
                 this.zoomLevelService.setActive(true);
                 this.reCluster();
             }
+
+            return this.clustersCollection.show;
         }
 
         /**
@@ -150,7 +164,7 @@ module rpComponents.clusterService {
             // debug
             return this.$http({
                 method: 'GET',
-                url: this.serviceUrl + this.zoomLevelService.nextIndex + '.json',
+                url: this.serviceUrl +"/"+ this.zoomLevelService.nextIndex + '.json',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -174,7 +188,7 @@ module rpComponents.clusterService {
                 document.getElementById("cluster-summary-chart-loading").style.display = 'block';
             }
             else {
-                this.summarySpinner = this.chartSpinnerService.addSpinner({
+                this.summarySpinner = this.loadingSpinnerService.addSpinner({
                     width: 100,
                     height: 100,
                     container: "#cluster-summary-chart-loading",
@@ -183,10 +197,11 @@ module rpComponents.clusterService {
                 this.summarySpinner();
             }
 
-            // debug
+            // DEBUG
+            // TODO update once establish cluster summary service
             this.$http({
                 method: 'GET',
-                url: this.serviceUrl + 'cluster-summary.json',
+                url: this.serviceUrl + '/cluster.json',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -229,7 +244,7 @@ module rpComponents.clusterService {
                     console.log("got no clusters");
                 }
             });
-        }
+        };
 
 
         drawClusters(sphereInstances: any, labelCollection: any): void {
@@ -315,24 +330,38 @@ module rpComponents.clusterService {
         }
     }
 
-    // ng register
     angular
         .module('explorer.rockproperties.clusters', [])
-        .factory("clusterService", ["$http", "$rootScope", "zoomLevelService", "clusterChartService", "chartSpinnerService",
-            (
-                $http: ng.IHttpService,
-                $rootScope: ng.IRootScopeService,
-                zoomLevelService: rpComponents.zoom.IZoomLevelService,
-                clusterChartService: rpComponents.chartService.IClusterChartService,
-                chartSpinnerService: rpComponents.spinnerService.IChartSpinnerService
-            ) =>
-
-                new rpComponents.clusterService.ClusterService(
-                    $http,
-                    $rootScope,
-                    zoomLevelService,
-                    clusterChartService,
-                    chartSpinnerService
-                )]);
+        .controller("rocksClusterFilterCtrl", RocksClusterFilterCtrl)
+        .directive("rocksClusterFilters", function(): ng.IDirective {
+            return {
+                templateUrl: 'rockprops/cluster-filters.html',
+                controller:  RocksClusterFilterCtrl,
+                controllerAs: 'rocksClusterFilterVM'
+            };
+        })
+        .factory("clusterService", [
+            "$http",
+            "$rootScope",
+            "zoomLevelService",
+            "clusterChartService",
+            "loadingSpinnerService",
+            "rocksConfigService",
+        (
+            $http: ng.IHttpService,
+            $rootScope: ng.IRootScopeService,
+            zoomLevelService: rpComponents.zoom.IZoomLevelService,
+            clusterChartService: rpComponents.chartService.IClusterChartService,
+            chartSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
+            rocksConfigService: rpComponents.config.IRocksConfigService
+        ) =>
+        new rpComponents.clusterService.ClusterService(
+            $http,
+            $rootScope,
+            zoomLevelService,
+            clusterChartService,
+            chartSpinnerService,
+            rocksConfigService
+        )]);
 
 }

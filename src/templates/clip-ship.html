@@ -1,0 +1,98 @@
+
+<div ng-show="rocksClipShipVM.rocksClipShipService.step == 'startDraw'">
+	<h6 class="dis-inline">
+		1.
+		<button ng-click="rocksClipShipVM.rocksClipShipService.startDraw()" style="padding: 5px 10px;border-radius: 3px;border: none;">
+			Click here
+		</button>
+		to select an area on the map <i class="fa fa-scissors" style="font-size: 16px;"></i></h6>
+</div>
+
+
+<div ng-show="rocksClipShipVM.rocksClipShipService.step == 'selectFeatures'">
+
+	<h6 class="dis-inline">2. Select features to download:</h6>
+
+	<div>
+
+		<!-- if we have active property filters, use them instead -->
+		<p ng-show="hasAnyFilter">
+			<i class="fa fa-info-circle"></i> Current filters will be applied to the exported data.
+		</p>
+
+		<div ng-hide="hasAnyFilter">
+
+			<div style="padding: 5px; margin-top: 10px; background: #f0f0f0; border-radius: 3px;">
+				<label>
+					<input type="checkbox" ng-model="masterCheck" ng-disabled="hasPropertyFilter" ng-change="rocksClipShipVM.rocksFiltersService.setAllExportSelected(masterCheck)" />
+					{{ masterCheck ? 'Deselect' : 'Select' }} All
+				</label>
+			</div>
+
+			<label style="margin-left: 25px;" class="checkbox" ng-repeat="property in rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions">
+				<input type="checkbox" value="property.isSelected" ng-model="property.isSelected" ng-checked="masterCheck" ng-disabled="hasPropertyFilter">
+				{{ property.name }}
+			</label>
+
+		</div>
+
+		<div style="margin: 20px 0px 20px 0px;">
+			<label title="Export Format">Export Format</label>
+			<select ng-change="rocksClipShipVM.rocksClipShipService.updateExportFormat(exportFormats.SelectedOption)"
+					ng-model="exportFormats.SelectedOption"
+					name="format"
+					ng-options="option for option in rocksClipShipVM.rocksClipShipService.exportFormats"
+					ng-class="form-control"
+					class="filter-input"
+					style="float: right; width: 160px;">
+				<option value="" class="">--select--</option>
+			</select>
+		</div>
+
+		<a ng-click="rocksClipShipVM.rocksClipShipService.openGeoserver()" style="font-size: 11px; margin-top: 20px; color: blue; text-decoration: underline;">
+			More Options via GeoServer Dashboard
+		</a>
+
+		<div style="margin-top: 20px;">
+			<button type="button" class="btn btn-default" ng-click="rocksClipShipVM.rocksClipShipService.step = 'startDraw'" title="Cancel Download" style="width: 40%; float: left;">Cancel</button>
+			<button type="button"
+					class="btn btn-default focusMe"
+					ng-click="rocksClipShipVM.startClipShip()"
+					style="width: 40%; float: right"
+					title="Select one or more reference feature classes before continuing."
+					ng-disabled="(rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions | noClipSelected) || (!rocksClipShipVM.rocksClipShipService.targetFormat)">Next</button>
+		</div>
+
+	</div>
+
+</div>
+
+<div ng-show="rocksClipShipVM.rocksClipShipService.step == 'download'">
+
+	<h6>3. Data Export:</h6>
+
+	<div ng-hide="rocksClipShipVM.rocksQueryBuilderExport.loading">
+
+		<p ng-show="rocksClipShipVM.rocksClipShipService.targetFormat === 'application/json'" style="margin-top: 40px;">
+			<i class="fa fa-info-circle"></i> Once json has loaded, save page as a .json file.
+		</p>
+
+		<p class="warning-block" style="margin-top: 20px;">
+			<i class="fa fa-info-circle"></i> Large data sets may take several minutes to export.
+		</p>
+
+		<a class="btn btn-default" target="_blank" href="{{rocksClipShipVM.rocksQueryBuilderExport.exportUrl}}" ng-click="rocksClipShipVM.rocksClipShipService.step = 'startDraw'" style="width: 100%; margin-top: 30px;" role="button">
+			<i class="fa fa-download"></i> Download {{ rocksClipShipVM.rocksClipShipService.targetFormat }}
+		</a>
+
+		<a class="btn btn-default" href="javascript:;" ng-click="rocksClipShipVM.rocksClipShipService.step = 'selectFeatures'" style="width: 100%; margin-top: 10px;" role="button">
+			<i class="fa fa-arrow-left"></i> Back
+		</a>
+
+	</div>
+
+</div>
+
+<div id="rock-clip-ship-loading" ng-show="rocksClipShipVM.rocksQueryBuilderExport.loading">
+	<p>Preparing Data..</p>
+</div>
