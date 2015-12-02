@@ -1,5 +1,5 @@
 # explorer-rock-properties-components
-AngularJS components related to rock properties, for use with CesiumJS.
+AngularJS components related to rock properties, for use with CesiumJS.<br/>
 This project is under development, and not ready for use.
 
 Potential functionality:
@@ -14,21 +14,23 @@ Potential functionality:
 
 # Get started
 
-<code>
-$ npm install<br/>
-$ bower install<br/>
-$ tsd install<br/>
+```shell
+$ npm install
+$ bower install
+$ tsd install
 $ gulp
-</code>
+```
 
 
 # Use
 
 `rocksPanelService.init(viewer, config)` is the entry point for the component.
 
-It should be initialised with a Cesium Viewer, and a config object for service endpoints/params, e.g.
+It should be initialised with a Cesium Viewer, and a config object for service endpoints/params.
 
-<code>
+Example config:
+
+```json
 "rockProps": {
 	"useClusterPicking": true,
 	"clusterServiceUrl": "resources/mock-service/explorer-cossap-services/service/rock-properties/clusters",
@@ -55,7 +57,7 @@ It should be initialised with a Cesium Viewer, and a config object for service e
 	"geoserverDashboardUrl": "http://www.ga.gov.au/geophysics-rockpropertypub-gws/web/?wicket:bookmarkablePage=:org.geoserver.web.demo.MapPreviewPage",
 	"filterNamesServiceUrl": "http://www.ga.gov.au/explorer-web/service/rockprops/filters"
   }
-</code>
+```
 
 # Dependencies
 
