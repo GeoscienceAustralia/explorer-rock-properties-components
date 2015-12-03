@@ -1,4 +1,5 @@
 # explorer-rock-properties-components
+
 AngularJS components related to rock properties, for use with CesiumJS.<br/>
 This project is under development, and not ready for use.
 
@@ -22,11 +23,11 @@ $ gulp
 ```
 
 
-# Use
+# Usage
 
 `rocksPanelService.init(viewer, config)` is the entry point for the component.
 
-It should be initialised with a Cesium Viewer, and a config object for service endpoints/params.
+It should be initialised with a <a href="https://cesiumjs.org/Cesium/Build/Documentation/Viewer.html">CesiumJS Viewer</a>, and a JSON config object for service endpoints/params.
 
 Example config:
 
@@ -64,7 +65,8 @@ Example config:
 This component uses:
 
 <ul>
-	<li>Font Awesome icons: http://fortawesome.github.io/Font-Awesome/</li>
-	<li>JSZIP: https://stuk.github.io/jszip/</li>
-	<li>FileSaver.js: https://github.com/Teleborder/FileSaver.js</li> 
+	<li><a href="http://d3js.org/">D3.js</a></li>
+	<li><a href="http://fortawesome.github.io/Font-Awesome/">Font Awesome icons</a></li>
+	<li><a href="https://stuk.github.io/jszip/">JSZIP</a></li>
+	<li><a href="https://github.com/Teleborder/FileSaver.js">FileSaver.js</a></li> 
 </ul>
