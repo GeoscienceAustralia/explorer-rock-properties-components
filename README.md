@@ -65,6 +65,7 @@ Example config:
 This component uses:
 
 <ul>
+	<li><a href="http://cesiumjs.org/">CesiumJS</a></li>
 	<li><a href="http://d3js.org/">D3.js</a></li>
 	<li><a href="http://fortawesome.github.io/Font-Awesome/">Font Awesome icons</a></li>
 	<li><a href="https://stuk.github.io/jszip/">JSZIP</a></li>
