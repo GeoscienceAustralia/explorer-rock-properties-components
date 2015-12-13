@@ -1,3 +1,15 @@
+
+<div style="padding: 5px 10px; margin-left: -10px; background: #f0f0f0; border-radius: 3px;">
+	<label>
+		<input
+			type="checkbox"
+			ng-model="rocksWmsPointsVM.wmsPointsService.masterChecked"
+			ng-change="rocksWmsPointsVM.wmsPointsService.toggleChecked()"
+			ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled"/>
+		{{ rocksWmsPointsVM.wmsPointsService.masterChecked ? 'Deselect' : 'Select' }} All
+	</label>
+</div>
+
 <div ng-repeat="legend in rocksWmsPointsVM.wmsPointsService.legendData" class='rocks-points-legend-item'>
 
 	<label>

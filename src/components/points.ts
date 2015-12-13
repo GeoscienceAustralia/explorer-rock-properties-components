@@ -32,6 +32,7 @@ module rpComponents.pointsService {
         wmsServiceUrl: string;
         wmsLayer: any;
         legendData: any;
+        masterChecked: boolean = true;
         pointsVisible: boolean;
         legendParamString: string = "";
 
@@ -76,6 +77,13 @@ module rpComponents.pointsService {
                 this.updatePointsLayer();
             }
             return this.pointsVisible;
+        }
+
+        public toggleChecked(): void {
+            this.masterChecked != this.masterChecked;
+            for(var legend in this.legendData){
+                this.legendData[legend]['isSelected'] = this.masterChecked;
+            }
         }
 
         getLegendData(): void{

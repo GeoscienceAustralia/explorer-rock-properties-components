@@ -13,7 +13,6 @@ module rpComponents.controlPanel {
     export class RocksPanelCtrl implements IRocksPanelCtrl {
 
         targetPanel: string = '';
-
         static $inject = ["$scope", "rocksPanelService"];
         constructor(
             public $scope: ng.IScope,
@@ -26,19 +25,14 @@ module rpComponents.controlPanel {
     }
 
     export interface IRocksPanelService {
-
         viewer: any;
-        rocksPanelActive: boolean;
         clustersEnabled: boolean;
         pointsEnabled: boolean;
-        toggleRocksPanel(): void;
-        enableRocksPanel(enable: boolean): void;
         toggleClusters(): void;
     }
     export class RocksPanelService implements IRocksPanelService {
 
         viewer: any;
-        rocksPanelActive: boolean = false;
         clustersEnabled: boolean = false;
         pointsEnabled: boolean = false;
 
@@ -72,23 +66,6 @@ module rpComponents.controlPanel {
             this.wmsPointsService.init(viewer);
         }
 
-        public toggleRocksPanel(): void {
-            this.rocksPanelActive = !this.rocksPanelActive;
-
-            // TODO make sure clusters init on first open..
-
-
-            //if(!this.rocksPanelActive){
-            //    console.log("broadcasting unlinked");
-            //    this.$rootScope.$broadcast('unlinked');
-            //}
-        }
-
-        public enableRocksPanel(enable: boolean): void {
-
-            this.rocksPanelActive = enable;
-        }
-
         public toggleClusters(): void {
             this.clustersEnabled = this.clusterService.toggleClusters();
         }
@@ -96,7 +73,6 @@ module rpComponents.controlPanel {
         public togglePoints(): void {
             this.pointsEnabled = this.wmsPointsService.togglePoints();
         }
-
     }
 
     angular
