@@ -485,7 +485,6 @@ var rpComponents;
                                 clusterInstances.push(_this.buildClusterInstance(clusters[i]));
                                 labelCollection.add(_this.buildLabel(clusters[i]));
                             }
-                            ;
                             _this.drawClusters(clusterInstances, labelCollection);
                         }
                         else {
@@ -631,7 +630,7 @@ var rpComponents;
                     })
                 });
                 this.clustersCollection.add(this.clusterPrimitive);
-                ////this.clustersCollection.add(labelCollection);
+                this.clustersCollection.add(labelCollection);
             };
             ClusterService.prototype.buildClusterInstance = function (cluster) {
                 var clusterProps = this.computeClusterAttributes(cluster.count);
@@ -652,7 +651,7 @@ var rpComponents;
             ClusterService.prototype.buildLabel = function (cluster) {
                 var clusterProps = this.computeClusterAttributes(cluster.count);
                 return {
-                    position: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 20 + (clusterProps.size * 2)),
+                    position: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 20 + clusterProps.extrudeHeight),
                     text: cluster.count.toString(),
                     fillColor: Cesium.Color.BLACK,
                     outlineColor: Cesium.Color.RED,
@@ -661,6 +660,7 @@ var rpComponents;
                     id: cluster
                 };
             };
+            // stop doing this twice - once for cluster + label
             ClusterService.prototype.computeClusterAttributes = function (count) {
                 var attrs = {
                     radius: 100000 * (this.zoomLevelService.nextIndex / 10),

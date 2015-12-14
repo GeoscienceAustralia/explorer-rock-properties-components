@@ -32,7 +32,7 @@ It should be initialised with a <a href="https://cesiumjs.org/Cesium/Build/Docum
 Example config:
 
 ```json
-"rockProps": {
+  {
 	"useClusterPicking": true,
 	"clusterServiceUrl": "resources/mock-service/explorer-cossap-services/service/rock-properties/clusters",
 	"geoserverWmsUrl": "http://www.ga.gov.au/geophysics-rockpropertypub-gws/ga_rock_properties_wms/wms",

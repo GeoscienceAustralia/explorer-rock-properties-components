@@ -249,7 +249,7 @@ module rpComponents.clusterService {
                     for(var i = 0; i < clusters.length; i++){
                         clusterInstances.push(this.buildClusterInstance(clusters[i]));
                         labelCollection.add(this.buildLabel(clusters[i]));
-                    };
+                    }
 
                     this.drawClusters(clusterInstances, labelCollection);
                 }
@@ -272,7 +272,7 @@ module rpComponents.clusterService {
                 })
             });
             this.clustersCollection.add(this.clusterPrimitive);
-            ////this.clustersCollection.add(labelCollection);
+            this.clustersCollection.add(labelCollection);
         }
 
         buildClusterInstance(cluster: rpComponents.cluster.ICluster): any {
@@ -294,12 +294,12 @@ module rpComponents.clusterService {
             return instance;
         }
 
-        buildLabel(cluster: rpComponents.cluster.ICluster): any{
+        buildLabel(cluster: rpComponents.cluster.ICluster): any {
 
-            var clusterProps: {size: number, color: any } = this.computeClusterAttributes(cluster.count);
+            var clusterProps: {radius: number, color: any, extrudeHeight: number } = this.computeClusterAttributes(cluster.count);
 
             return {
-                position : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 20 + (clusterProps.size * 2)),
+                position : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 20 + clusterProps.extrudeHeight),
                 text: cluster.count.toString(),
                 fillColor: Cesium.Color.BLACK,
                 outlineColor: Cesium.Color.RED,
@@ -309,6 +309,7 @@ module rpComponents.clusterService {
             };
         }
 
+        // stop doing this twice - once for cluster + label
         computeClusterAttributes(count: number): any {
 
             var attrs: any = {
