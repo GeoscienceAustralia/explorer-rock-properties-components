@@ -72,7 +72,7 @@ This component uses:
 	<li><a href="https://github.com/Teleborder/FileSaver.js">FileSaver.js</a></li> 
 </ul>
 
-# Screenshots
+# Demo screenshots
 
 <p>Chart clustered rock properties data:</p>
 ![Chart clustered rock properties data](screenshots/cluster-chart.png "Chart clustered rock properties data")
