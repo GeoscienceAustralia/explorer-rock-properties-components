@@ -1,6 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 declare var Cesium: any;
+declare var d3: any;
 
 module rpComponents.clusterService {
 
@@ -28,7 +29,7 @@ module rpComponents.clusterService {
         toggleClusters(): boolean;
         getClusters(heightIndex: number, extent: any): [rpComponents.cluster.ICluster];
         reCluster(): void;
-        buildSphereInstance(cluster: rpComponents.cluster.ICluster): any;
+        buildClusterInstance(cluster: rpComponents.cluster.ICluster): any;
         buildLabel(cluster: rpComponents.cluster.ICluster): any;
         drawClusters(sphereInstances: any, labelCollection: any): void;
         setHighlighted(id: any, highlight: boolean): void;
@@ -43,6 +44,10 @@ module rpComponents.clusterService {
         serviceUrl: string;
         clusterPrimitive: any;
         clustersCollection: any;
+        clusterRangeMeta: any = {
+            maxExtrudeHeight: 500000
+        };
+
         targetId: any;
         summarySpinner: any;
 
@@ -109,7 +114,7 @@ module rpComponents.clusterService {
 
             if(attributes && highlight){
                 attributes.prevColor = attributes.color;
-                attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#F5ED05').withAlpha(1));
+                attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#ff00ff').withAlpha(1));
             }
         }
 
@@ -219,12 +224,13 @@ module rpComponents.clusterService {
 
         /**
          *
-         * We get a performance benefit when we use fewer primitives/collections to draw multiple static geometries.
+         * We get a performance benefit when we use fewer
+         * primitives/collections to draw multiple static geometries.
          *
          */
         reCluster = (): void => {
 
-            var sphereInstances: any = [];
+            var clusterInstances: any = [];
             var labelCollection: any = new Cesium.LabelCollection();
 
             this.getClusters().then((response: any) => {
@@ -233,68 +239,64 @@ module rpComponents.clusterService {
 
                     var clusters: [rpComponents.cluster.ICluster] = response.data;
 
-                    for(var i = 0; i < clusters.length; i++){
-                        sphereInstances.push(this.buildSphereInstance(clusters[i]));
-                        labelCollection.add(this.buildLabel(clusters[i]));
-                    }
+                    // use d3 to build a scale for our extrude heights; we'll create a diff scale
+                    // for each zoom level, as we can't guarantee they'll start at the top and work down
+                    this.clusterRangeMeta.maxCount = d3.max(clusters, function(d: any) { return d.count; });
+                    this.clusterRangeMeta.scale = d3.scale.linear()
+                        .domain([0, this.clusterRangeMeta.maxCount])
+                        .range([0, this.clusterRangeMeta.maxExtrudeHeight]);
 
-                    this.drawClusters(sphereInstances, labelCollection);
+                    for(var i = 0; i < clusters.length; i++){
+                        clusterInstances.push(this.buildClusterInstance(clusters[i]));
+                        labelCollection.add(this.buildLabel(clusters[i]));
+                    };
+
+                    this.drawClusters(clusterInstances, labelCollection);
                 }
                 else {
                     console.log("got no clusters");
+                    console.log(response);
                 }
             });
         };
 
 
-        drawClusters(sphereInstances: any, labelCollection: any): void {
+        drawClusters(instances: any, labelCollection: any): void {
 
             this.clustersCollection.removeAll();
             this.clusterPrimitive = new Cesium.Primitive({
-                geometryInstances : sphereInstances,
+                geometryInstances : instances,
                 appearance : new Cesium.PerInstanceColorAppearance({
                     translucent : true,
                     closed : true
                 })
             });
             this.clustersCollection.add(this.clusterPrimitive);
-            this.clustersCollection.add(labelCollection);
+            ////this.clustersCollection.add(labelCollection);
         }
 
-        buildSphereInstance(cluster: rpComponents.cluster.ICluster): any{
+        buildClusterInstance(cluster: rpComponents.cluster.ICluster): any {
 
-            var clusterProps: {size: number, color: any} = this.computeClusterAttributes(cluster.count);
-
-            // Sphere geometries are initially centered on the origin.
-            // We can use a model matrix to position the sphere on the globe surface.
-            var positionOnEllipsoid = Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat);
-            var modelMatrix = Cesium.Matrix4.multiplyByTranslation(
-                Cesium.Transforms.eastNorthUpToFixedFrame(positionOnEllipsoid),
-                new Cesium.Cartesian3(cluster.lon, cluster.lat, clusterProps.size), new Cesium.Matrix4()
-            );
-            // Create a sphere geometry.
-            var sphereGeometry = new Cesium.SphereGeometry({
-                vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-                radius : clusterProps.size
-            });
-
-            // Create a geometry instance using the geometry and model matrix created above.
-            var sphereInstance = new Cesium.GeometryInstance({
-                geometry : sphereGeometry,
-                modelMatrix : modelMatrix,
-                vertexFormat : Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT,
+            var clusterProps: {radius: number, color: any, extrudeHeight: number} = this.computeClusterAttributes(cluster.count);
+            var instance = new Cesium.GeometryInstance({
+                geometry : new Cesium.CircleGeometry({
+                    center : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat),
+                    radius : clusterProps.radius,
+                    vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+                    extrudedHeight: clusterProps.extrudeHeight //cluster.count * 10
+                }),
+                id : cluster,
                 attributes : {
                     color : Cesium.ColorGeometryInstanceAttribute.fromColor(clusterProps.color)
-                },
-                id: cluster
+                }
             });
 
-            return sphereInstance;
+            return instance;
         }
 
         buildLabel(cluster: rpComponents.cluster.ICluster): any{
 
-            var clusterProps: {size: number, color: any} = this.computeClusterAttributes(cluster.count);
+            var clusterProps: {size: number, color: any } = this.computeClusterAttributes(cluster.count);
 
             return {
                 position : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 20 + (clusterProps.size * 2)),
@@ -309,24 +311,20 @@ module rpComponents.clusterService {
 
         computeClusterAttributes(count: number): any {
 
+            var attrs: any = {
+                radius: 100000 * (this.zoomLevelService.nextIndex / 10),
+                extrudeHeight: this.clusterRangeMeta.scale(count) * (this.zoomLevelService.nextIndex / 10)
+            };
             if(count < 100){
-                 return {
-                     size: 10000 * this.zoomLevelService.nextIndex,
-                     color: Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5)
-                 };
+                attrs.color = Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5);
             }
             else if(count >= 10 && count < 1000){
-                return {
-                    size: 10000  * this.zoomLevelService.nextIndex,
-                    color: Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5)
-                };
+                attrs.color = Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5);
             }
             else {
-                return {
-                    size: 10000  * this.zoomLevelService.nextIndex,
-                    color: Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5)
-                };
+                attrs.color = Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5);
             }
+            return attrs;
         }
     }
 

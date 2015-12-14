@@ -71,3 +71,16 @@ This component uses:
 	<li><a href="https://stuk.github.io/jszip/">JSZIP</a></li>
 	<li><a href="https://github.com/Teleborder/FileSaver.js">FileSaver.js</a></li> 
 </ul>
+
+# Screenshots
+
+<p>Chart clustered rock properties data:</p>
+![Chart clustered rock properties data](screenshots/cluster-chart.png "Chart clustered rock properties data")
+
+
+<p>Filter WMS layers by property:</p>
+![Filter WMS layers by property](screenshots/wms-layers.png "Filter WMS layers by property")
+
+
+<p>Export rock properties data by property and location:</p>
+![Export rock properties data by property and location](screenshots/data-export.png "Export rock properties data by property and location")

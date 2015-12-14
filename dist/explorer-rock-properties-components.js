@@ -460,25 +460,37 @@ var rpComponents;
                 this.clusterChartService = clusterChartService;
                 this.loadingSpinnerService = loadingSpinnerService;
                 this.rocksConfigService = rocksConfigService;
+                this.clusterRangeMeta = {
+                    maxExtrudeHeight: 500000
+                };
                 /**
                  *
-                 * We get a performance benefit when we use fewer primitives/collections to draw multiple static geometries.
+                 * We get a performance benefit when we use fewer
+                 * primitives/collections to draw multiple static geometries.
                  *
                  */
                 this.reCluster = function () {
-                    var sphereInstances = [];
+                    var clusterInstances = [];
                     var labelCollection = new Cesium.LabelCollection();
                     _this.getClusters().then(function (response) {
                         if (response.data) {
                             var clusters = response.data;
+                            // use d3 to build a scale for our extrude heights; we'll create a diff scale
+                            // for each zoom level, as we can't guarantee they'll start at the top and work down
+                            _this.clusterRangeMeta.maxCount = d3.max(clusters, function (d) { return d.count; });
+                            _this.clusterRangeMeta.scale = d3.scale.linear()
+                                .domain([0, _this.clusterRangeMeta.maxCount])
+                                .range([0, _this.clusterRangeMeta.maxExtrudeHeight]);
                             for (var i = 0; i < clusters.length; i++) {
-                                sphereInstances.push(_this.buildSphereInstance(clusters[i]));
+                                clusterInstances.push(_this.buildClusterInstance(clusters[i]));
                                 labelCollection.add(_this.buildLabel(clusters[i]));
                             }
-                            _this.drawClusters(sphereInstances, labelCollection);
+                            ;
+                            _this.drawClusters(clusterInstances, labelCollection);
                         }
                         else {
                             console.log("got no clusters");
+                            console.log(response);
                         }
                     });
                 };
@@ -518,7 +530,7 @@ var rpComponents;
                 var attributes = this.clusterPrimitive.getGeometryInstanceAttributes(id);
                 if (attributes && highlight) {
                     attributes.prevColor = attributes.color;
-                    attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#F5ED05').withAlpha(1));
+                    attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#ff00ff').withAlpha(1));
                 }
             };
             ClusterService.prototype.clearHighlighted = function () {
@@ -609,40 +621,33 @@ var rpComponents;
                     }
                 });
             };
-            ClusterService.prototype.drawClusters = function (sphereInstances, labelCollection) {
+            ClusterService.prototype.drawClusters = function (instances, labelCollection) {
                 this.clustersCollection.removeAll();
                 this.clusterPrimitive = new Cesium.Primitive({
-                    geometryInstances: sphereInstances,
+                    geometryInstances: instances,
                     appearance: new Cesium.PerInstanceColorAppearance({
                         translucent: true,
                         closed: true
                     })
                 });
                 this.clustersCollection.add(this.clusterPrimitive);
-                this.clustersCollection.add(labelCollection);
+                ////this.clustersCollection.add(labelCollection);
             };
-            ClusterService.prototype.buildSphereInstance = function (cluster) {
+            ClusterService.prototype.buildClusterInstance = function (cluster) {
                 var clusterProps = this.computeClusterAttributes(cluster.count);
-                // Sphere geometries are initially centered on the origin.
-                // We can use a model matrix to position the sphere on the globe surface.
-                var positionOnEllipsoid = Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat);
-                var modelMatrix = Cesium.Matrix4.multiplyByTranslation(Cesium.Transforms.eastNorthUpToFixedFrame(positionOnEllipsoid), new Cesium.Cartesian3(cluster.lon, cluster.lat, clusterProps.size), new Cesium.Matrix4());
-                // Create a sphere geometry.
-                var sphereGeometry = new Cesium.SphereGeometry({
-                    vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-                    radius: clusterProps.size
-                });
-                // Create a geometry instance using the geometry and model matrix created above.
-                var sphereInstance = new Cesium.GeometryInstance({
-                    geometry: sphereGeometry,
-                    modelMatrix: modelMatrix,
-                    vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT,
+                var instance = new Cesium.GeometryInstance({
+                    geometry: new Cesium.CircleGeometry({
+                        center: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat),
+                        radius: clusterProps.radius,
+                        vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+                        extrudedHeight: clusterProps.extrudeHeight //cluster.count * 10
+                    }),
+                    id: cluster,
                     attributes: {
                         color: Cesium.ColorGeometryInstanceAttribute.fromColor(clusterProps.color)
-                    },
-                    id: cluster
+                    }
                 });
-                return sphereInstance;
+                return instance;
             };
             ClusterService.prototype.buildLabel = function (cluster) {
                 var clusterProps = this.computeClusterAttributes(cluster.count);
@@ -657,24 +662,20 @@ var rpComponents;
                 };
             };
             ClusterService.prototype.computeClusterAttributes = function (count) {
+                var attrs = {
+                    radius: 100000 * (this.zoomLevelService.nextIndex / 10),
+                    extrudeHeight: this.clusterRangeMeta.scale(count) * (this.zoomLevelService.nextIndex / 10)
+                };
                 if (count < 100) {
-                    return {
-                        size: 10000 * this.zoomLevelService.nextIndex,
-                        color: Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5)
-                    };
+                    attrs.color = Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5);
                 }
                 else if (count >= 10 && count < 1000) {
-                    return {
-                        size: 10000 * this.zoomLevelService.nextIndex,
-                        color: Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5)
-                    };
+                    attrs.color = Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5);
                 }
                 else {
-                    return {
-                        size: 10000 * this.zoomLevelService.nextIndex,
-                        color: Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5)
-                    };
+                    attrs.color = Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5);
                 }
+                return attrs;
             };
             ClusterService.$inject = [
                 "$http",
