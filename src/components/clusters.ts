@@ -29,8 +29,8 @@ module rpComponents.clusterService {
         toggleClusters(): boolean;
         getClusters(heightIndex: number, extent: any): [rpComponents.cluster.ICluster];
         reCluster(): void;
-        buildClusterInstance(cluster: rpComponents.cluster.ICluster): any;
-        buildLabel(cluster: rpComponents.cluster.ICluster): any;
+        buildClusterInstance(cluster: rpComponents.cluster.ICluster, props: any): any;
+        buildLabel(cluster: rpComponents.cluster.ICluster, props: any): any;
         drawClusters(sphereInstances: any, labelCollection: any): void;
         setHighlighted(id: any, highlight: boolean): void;
         clearHighlighted(): void;
@@ -94,8 +94,6 @@ module rpComponents.clusterService {
                     // TODO revise cluster pick validation when we decide on format for service
                     var pick = this.viewer.scene.pick(movement.position);
                     if (Cesium.defined(pick) && pick.hasOwnProperty('id') && pick.id.hasOwnProperty('lat')) {
-
-                        //if(this.targetId) this.setHighlighted(this.targetId, false);
 
                         this.clearHighlighted();
                         this.targetId = pick.id;
@@ -247,8 +245,10 @@ module rpComponents.clusterService {
                         .range([0, this.clusterRangeMeta.maxExtrudeHeight]);
 
                     for(var i = 0; i < clusters.length; i++){
-                        clusterInstances.push(this.buildClusterInstance(clusters[i]));
-                        labelCollection.add(this.buildLabel(clusters[i]));
+
+                        var clusterProps: any = this.computeClusterAttributes(clusters[i].count);
+                        clusterInstances.push(this.buildClusterInstance(clusters[i], clusterProps));
+                        labelCollection.add(this.buildLabel(clusters[i], clusterProps));
                     }
 
                     this.drawClusters(clusterInstances, labelCollection);
@@ -275,9 +275,9 @@ module rpComponents.clusterService {
             this.clustersCollection.add(labelCollection);
         }
 
-        buildClusterInstance(cluster: rpComponents.cluster.ICluster): any {
+        buildClusterInstance(cluster: rpComponents.cluster.ICluster, clusterProps: any): any {
 
-            var clusterProps: {radius: number, color: any, extrudeHeight: number} = this.computeClusterAttributes(cluster.count);
+
             var instance = new Cesium.GeometryInstance({
                 geometry : new Cesium.CircleGeometry({
                     center : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat),
@@ -294,16 +294,15 @@ module rpComponents.clusterService {
             return instance;
         }
 
-        buildLabel(cluster: rpComponents.cluster.ICluster): any {
-
-            var clusterProps: {radius: number, color: any, extrudeHeight: number } = this.computeClusterAttributes(cluster.count);
+        buildLabel(cluster: rpComponents.cluster.ICluster, clusterProps: any): any {
 
             return {
-                position : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 20 + clusterProps.extrudeHeight),
+                position : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 100 + clusterProps.extrudeHeight),
                 text: cluster.count.toString(),
                 fillColor: Cesium.Color.BLACK,
                 outlineColor: Cesium.Color.RED,
-                font: '30px arial, sans-serif',
+                // TODO review labelling
+                font: (40 - this.zoomLevelService.nextIndex)+'px arial, sans-serif',
                 horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                 id: cluster
             };

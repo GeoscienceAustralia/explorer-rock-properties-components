@@ -482,8 +482,9 @@ var rpComponents;
                                 .domain([0, _this.clusterRangeMeta.maxCount])
                                 .range([0, _this.clusterRangeMeta.maxExtrudeHeight]);
                             for (var i = 0; i < clusters.length; i++) {
-                                clusterInstances.push(_this.buildClusterInstance(clusters[i]));
-                                labelCollection.add(_this.buildLabel(clusters[i]));
+                                var clusterProps = _this.computeClusterAttributes(clusters[i].count);
+                                clusterInstances.push(_this.buildClusterInstance(clusters[i], clusterProps));
+                                labelCollection.add(_this.buildLabel(clusters[i], clusterProps));
                             }
                             _this.drawClusters(clusterInstances, labelCollection);
                         }
@@ -515,7 +516,6 @@ var rpComponents;
                         // TODO revise cluster pick validation when we decide on format for service
                         var pick = _this.viewer.scene.pick(movement.position);
                         if (Cesium.defined(pick) && pick.hasOwnProperty('id') && pick.id.hasOwnProperty('lat')) {
-                            //if(this.targetId) this.setHighlighted(this.targetId, false);
                             _this.clearHighlighted();
                             _this.targetId = pick.id;
                             _this.queryCluster(_this.targetId);
@@ -632,8 +632,7 @@ var rpComponents;
                 this.clustersCollection.add(this.clusterPrimitive);
                 this.clustersCollection.add(labelCollection);
             };
-            ClusterService.prototype.buildClusterInstance = function (cluster) {
-                var clusterProps = this.computeClusterAttributes(cluster.count);
+            ClusterService.prototype.buildClusterInstance = function (cluster, clusterProps) {
                 var instance = new Cesium.GeometryInstance({
                     geometry: new Cesium.CircleGeometry({
                         center: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat),
@@ -648,14 +647,14 @@ var rpComponents;
                 });
                 return instance;
             };
-            ClusterService.prototype.buildLabel = function (cluster) {
-                var clusterProps = this.computeClusterAttributes(cluster.count);
+            ClusterService.prototype.buildLabel = function (cluster, clusterProps) {
                 return {
-                    position: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 20 + clusterProps.extrudeHeight),
+                    position: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 100 + clusterProps.extrudeHeight),
                     text: cluster.count.toString(),
                     fillColor: Cesium.Color.BLACK,
                     outlineColor: Cesium.Color.RED,
-                    font: '30px arial, sans-serif',
+                    // TODO review labelling
+                    font: (40 - this.zoomLevelService.nextIndex) + 'px arial, sans-serif',
                     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                     id: cluster
                 };

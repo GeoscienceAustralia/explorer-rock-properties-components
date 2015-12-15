@@ -9,8 +9,8 @@
     "cesium"
   ],
   "main": [
-    "dist/explorer-rock-properties-components.min.css",
-    "dist/explorer-rock-properties-components.min.js"
+    "dist/explorer-rock-properties-components.css",
+    "dist/explorer-rock-properties-components.js"
   ],
   "repository": {
     "type": "git",
