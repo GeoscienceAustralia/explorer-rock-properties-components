@@ -3,3 +3,5 @@ bower_components/
 data/
 node_modules/
 typings/
+src/css
+src/css/*
