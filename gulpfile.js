@@ -11,6 +11,7 @@ var templateCache = require('gulp-angular-templatecache');
 var ts            = require('gulp-typescript');
 var tslint        = require('gulp-tslint');
 var uglify        = require('gulp-uglify');
+var sass          = require('gulp-sass');
 
 // Lint Task
 gulp.task('lint', function() {
@@ -38,15 +39,20 @@ gulp.task('scripts', function() {
 
 // Watch Files For Changes
 gulp.task('watch', function() {
-    // We watch both JS and HTML files.
+    // We'll watch JS, SCSS and HTML files.
     gulp.watch('src/components/**/*(*.ts|*.html)', ['lint', 'scripts']);
 	gulp.watch('src/templates/*.html', ['lint', 'scripts']);
-    gulp.watch('src/css/*.css', ['concatCss']);
-    //gulp.watch('scss/*.scss', ['sass']);
+    gulp.watch('src/scss/*.scss', ['sass', 'concatCss']);
+});
+
+gulp.task('sass', function () {
+	gulp.src('src/scss/*.scss')
+		.pipe(sass().on('error', sass.logError))
+		.pipe(gulp.dest('src/css'));
 });
 
 gulp.task('concatCss', function () {
-    return gulp.src('src/css/**/*.css')
+    return gulp.src('src/css/*.css')
         .pipe(concatCss("explorer-rock-properties-components.css"))
         .pipe(gulp.dest('dist/'));
 });
@@ -57,7 +63,7 @@ gulp.task('resources', function () {
 });
 
 // Default Task
-gulp.task('default', ['lint', 'scripts', 'concatCss', 'resources', 'watch']);
+gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'resources', 'watch']);
 
 function prepareTemplates() {
    return gulp.src('src/templates/**/*.html')
