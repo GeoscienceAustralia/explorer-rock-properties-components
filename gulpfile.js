@@ -12,6 +12,7 @@ var ts            = require('gulp-typescript');
 var tslint        = require('gulp-tslint');
 var uglify        = require('gulp-uglify');
 var sass          = require('gulp-sass');
+var minifyCss     = require('gulp-minify-css');
 
 // Lint Task
 gulp.task('lint', function() {
@@ -51,10 +52,17 @@ gulp.task('sass', function () {
 		.pipe(gulp.dest('src/css'));
 });
 
-gulp.task('concatCss', function () {
+gulp.task('concatCss', ['sass'], function () {
     return gulp.src('src/css/*.css')
         .pipe(concatCss("explorer-rock-properties-components.css"))
-        .pipe(gulp.dest('dist/'));
+        .pipe(gulp.dest('dist'));
+});
+
+gulp.task('minifyCss', ['sass', 'concatCss'], function() {
+	gulp.src('dist/explorer-rock-properties-components.css')
+		.pipe(minifyCss())
+		.pipe(rename({suffix: '.min'}))
+		.pipe(gulp.dest('dist'));
 });
 
 gulp.task('resources', function () {
@@ -63,7 +71,7 @@ gulp.task('resources', function () {
 });
 
 // Default Task
-gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'resources', 'watch']);
+gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'minifyCss', 'resources', 'watch']);
 
 function prepareTemplates() {
    return gulp.src('src/templates/**/*.html')
