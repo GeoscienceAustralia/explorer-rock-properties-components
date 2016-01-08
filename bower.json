@@ -31,7 +31,7 @@
     "bower.json"
   ],
   "dependencies": {
-    "cesiumjs": "1.15.x",
+    "cesiumjs": "1.17.x",
     "jszip": "~2.5.0",
     "file-saver.js": "~1.20150507.2",
     "d3": "~3.5.10"

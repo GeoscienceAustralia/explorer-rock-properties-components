@@ -43,7 +43,7 @@ gulp.task('watch', function() {
     // We'll watch JS, SCSS and HTML files.
     gulp.watch('src/components/**/*(*.ts|*.html)', ['lint', 'scripts']);
 	gulp.watch('src/templates/*.html', ['lint', 'scripts']);
-    gulp.watch('src/scss/*.scss', ['sass', 'concatCss']);
+    gulp.watch('src/scss/*.scss', ['sass', 'concatCss', 'minifyCss']);
 });
 
 gulp.task('sass', function () {
