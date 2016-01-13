@@ -12,7 +12,7 @@ var ts            = require('gulp-typescript');
 var tslint        = require('gulp-tslint');
 var uglify        = require('gulp-uglify');
 var sass          = require('gulp-sass');
-var minifyCss     = require('gulp-minify-css');
+var cssNano     = require('gulp-cssnano');
 
 // Lint Task
 gulp.task('lint', function() {
@@ -43,7 +43,7 @@ gulp.task('watch', function() {
     // We'll watch JS, SCSS and HTML files.
     gulp.watch('src/components/**/*(*.ts|*.html)', ['lint', 'scripts']);
 	gulp.watch('src/templates/*.html', ['lint', 'scripts']);
-    gulp.watch('src/scss/*.scss', ['sass', 'concatCss', 'minifyCss']);
+    gulp.watch('src/scss/*.scss', ['sass', 'concatCss', 'cssNano']);
 });
 
 gulp.task('sass', function () {
@@ -58,9 +58,9 @@ gulp.task('concatCss', ['sass'], function () {
         .pipe(gulp.dest('dist'));
 });
 
-gulp.task('minifyCss', ['sass', 'concatCss'], function() {
+gulp.task('cssNano', ['sass', 'concatCss'], function() {
 	gulp.src('dist/explorer-rock-properties-components.css')
-		.pipe(minifyCss())
+		.pipe(cssNano())
 		.pipe(rename({suffix: '.min'}))
 		.pipe(gulp.dest('dist'));
 });
@@ -71,7 +71,7 @@ gulp.task('resources', function () {
 });
 
 // Default Task
-gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'minifyCss', 'resources', 'watch']);
+gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'cssNano', 'resources', 'watch']);
 
 function prepareTemplates() {
    return gulp.src('src/templates/**/*.html')
