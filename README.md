@@ -1,7 +1,7 @@
 # explorer-rock-properties-components
 
 AngularJS components related to rock properties, for use with CesiumJS.<br/>
-This project is under development, and not ready for use.
+**This project is under development, and not ready for use.**
 
 Potential functionality:
 

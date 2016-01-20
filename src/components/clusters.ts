@@ -27,10 +27,10 @@ module rpComponents.clusterService {
 
         init(viewer: any): void;
         toggleClusters(): boolean;
-        getClusters(heightIndex: number, extent: any): [rpComponents.cluster.ICluster];
+        getClusters(heightIndex: number, extent: any): any;
         reCluster(): void;
-        buildClusterInstance(cluster: rpComponents.cluster.ICluster, props: any): any;
-        buildLabel(cluster: rpComponents.cluster.ICluster, props: any): any;
+        buildClusterInstance(cluster: any, props: any): any;
+        buildLabel(cluster: any, props: any): any;
         drawClusters(sphereInstances: any, labelCollection: any): void;
         setHighlighted(id: any, highlight: boolean): void;
         clearHighlighted(): void;
@@ -85,24 +85,22 @@ module rpComponents.clusterService {
                 this.reCluster();
             });
 
-            // disable picking if you don't need charts
+            // setup our pick handler
             if(this.rocksConfigService.config.useClusterPicking){
 
                 this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
                 this.pickHandlerAction = (movement: any) => {
 
-                    // TODO revise cluster pick validation when we decide on format for service
                     var pick = this.viewer.scene.pick(movement.position);
-                    if (Cesium.defined(pick) && Cesium.defined(pick.id)) {
 
+                    // TODO revise cluster pick validation when we decide on format for service
+                    if (Cesium.defined(pick) && Cesium.defined(pick.id) && pick.id.hasOwnProperty('featureType') && pick.id.featureType == 'rockPropsCluster') {
                         this.clearHighlighted();
                         this.targetId = pick.id;
                         this.queryCluster(this.targetId);
                         this.setHighlighted(this.targetId, true);
                     }
                 };
-
-                this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
             }
         }
 
@@ -149,6 +147,8 @@ module rpComponents.clusterService {
 
                 this.zoomLevelService.setActive(true);
                 this.reCluster();
+
+                this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
             }
 
             return this.clustersCollection.show;
@@ -184,7 +184,7 @@ module rpComponents.clusterService {
          *
          * @param cluster
          */
-        public queryCluster(cluster: rpComponents.cluster.ICluster): void {
+        public queryCluster(cluster: any): void {
 
             //  spinner for summary chart load
             if(this.summarySpinner){
@@ -235,9 +235,9 @@ module rpComponents.clusterService {
 
                 if(response.data){
 
-                    var clusters: [rpComponents.cluster.ICluster] = response.data;
+                    var clusters: [any] = response.data;
 
-                    // use d3 to build a scale for our extrude heights; we'll create a diff scale
+                    // use d3 to build a scale for our extrude heights; we'll build a diff scale
                     // for each zoom level, as we can't guarantee they'll start at the top and work down
                     this.clusterRangeMeta.maxCount = d3.max(clusters, function(d: any) { return d.count; });
                     this.clusterRangeMeta.scale = d3.scale.linear()
@@ -245,6 +245,9 @@ module rpComponents.clusterService {
                         .range([0, this.clusterRangeMeta.maxExtrudeHeight]);
 
                     for(var i = 0; i < clusters.length; i++){
+
+                        // tag id with type for pick handling
+                        clusters[i]['featureType'] = 'rockPropsCluster';
 
                         var clusterProps: any = this.computeClusterAttributes(clusters[i].count);
                         clusterInstances.push(this.buildClusterInstance(clusters[i], clusterProps));
@@ -275,26 +278,23 @@ module rpComponents.clusterService {
             this.clustersCollection.add(labelCollection);
         }
 
-        buildClusterInstance(cluster: rpComponents.cluster.ICluster, clusterProps: any): any {
+        buildClusterInstance(cluster: any, clusterProps: any): any {
 
-
-            var instance = new Cesium.GeometryInstance({
+            return new Cesium.GeometryInstance({
                 geometry : new Cesium.CircleGeometry({
                     center : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat),
                     radius : clusterProps.radius,
                     vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-                    extrudedHeight: clusterProps.extrudeHeight //cluster.count * 10
+                    extrudedHeight: clusterProps.extrudeHeight
                 }),
                 id : cluster,
                 attributes : {
                     color : Cesium.ColorGeometryInstanceAttribute.fromColor(clusterProps.color)
                 }
             });
-
-            return instance;
         }
 
-        buildLabel(cluster: rpComponents.cluster.ICluster, clusterProps: any): any {
+        buildLabel(cluster: any, clusterProps: any): any {
 
             return {
                 position : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 100 + clusterProps.extrudeHeight),
@@ -308,7 +308,6 @@ module rpComponents.clusterService {
             };
         }
 
-        // stop doing this twice - once for cluster + label
         computeClusterAttributes(count: number): any {
 
             var attrs: any = {
