@@ -515,7 +515,7 @@ var rpComponents;
                     this.pickHandlerAction = function (movement) {
                         // TODO revise cluster pick validation when we decide on format for service
                         var pick = _this.viewer.scene.pick(movement.position);
-                        if (Cesium.defined(pick) && pick.hasOwnProperty('id') && pick.id.hasOwnProperty('lat')) {
+                        if (Cesium.defined(pick) && Cesium.defined(pick.id)) {
                             _this.clearHighlighted();
                             _this.targetId = pick.id;
                             _this.queryCluster(_this.targetId);

@@ -93,7 +93,7 @@ module rpComponents.clusterService {
 
                     // TODO revise cluster pick validation when we decide on format for service
                     var pick = this.viewer.scene.pick(movement.position);
-                    if (Cesium.defined(pick) && pick.hasOwnProperty('id') && pick.id.hasOwnProperty('lat')) {
+                    if (Cesium.defined(pick) && Cesium.defined(pick.id)) {
 
                         this.clearHighlighted();
                         this.targetId = pick.id;
