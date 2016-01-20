@@ -28,7 +28,8 @@
     "test",
     "gulpfile.js",
     "package.json",
-    "bower.json"
+    "bower.json",
+	"screenshots"
   ],
   "dependencies": {
     "cesiumjs": "1.17.x",
