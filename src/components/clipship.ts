@@ -43,6 +43,7 @@ module rpComponents.clipShipService {
 
     export interface IRocksClipShipService {
         step: string;
+        isDrawing: boolean;
         exportFormats: [string];
         targetExtent: any;
         targetFormat: string;
@@ -53,6 +54,7 @@ module rpComponents.clipShipService {
     export class RocksClipShipService implements IRocksClipShipService {
 
         step: string = "startDraw";
+        isDrawing: boolean = false;
         exportFormats: [string];
         targetExtent: any;
         targetFormat: string;
@@ -83,6 +85,7 @@ module rpComponents.clipShipService {
          * broadcast event to trigger draw, and return extent
          */
         startDraw(): void {
+            this.isDrawing = true;
             this.$rootScope.$broadcast("draw.extent.start", "rocks.extent.ready");
         }
 

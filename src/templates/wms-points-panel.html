@@ -1,48 +1,31 @@
-<div ng-show="rocksWmsPointsVM.wmsInspectorState.view == 'LEGEND'">
-
-	<div style="padding: 5px 10px; margin: 0px 0px 10px -10px; background: #f0f0f0; border-radius: 3px;">
-		<label>
-			<input
-				type="checkbox"
-				ng-model="rocksWmsPointsVM.wmsPointsService.inspectorEnabled"
-				ng-change="rocksWmsPointsVM.wmsPointsService.togglePointInspector()"
-			/>
-			Click to inspect ({{ rocksWmsPointsVM.wmsPointsService.inspectorEnabled && rocksWmsPointsVM.rocksPanelService.pointsEnabled ? 'Active' : 'Disabled' }})
-		</label>
-	</div>
-
-	<div style="padding: 5px 10px; margin-left: -10px; background: #f0f0f0; border-radius: 3px;">
-		<label>
-			<input
-				type="checkbox"
-				ng-model="rocksWmsPointsVM.wmsPointsService.masterChecked"
-				ng-change="rocksWmsPointsVM.wmsPointsService.toggleChecked()"
-				ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled"/>
-			{{ rocksWmsPointsVM.wmsPointsService.masterChecked ? 'Deselect' : 'Select' }} all layers
-		</label>
-	</div>
-
-	<div ng-repeat="legend in rocksWmsPointsVM.wmsPointsService.legendData" class='rocks-points-legend-item'>
-
-		<label>
-			<input
+<div style="padding: 5px 10px; margin-left: -10px; background: #f0f0f0; border-radius: 3px;">
+	<label>
+		<input
 			type="checkbox"
-			ng-model="legend.isSelected"
-			ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled" />
-			<img ng-src="{{legend.legendUrl}}" alt="{{legend}} legend icon" />
-		</label>
+			ng-model="rocksWmsPointsVM.wmsPointsService.masterChecked"
+			ng-change="rocksWmsPointsVM.wmsPointsService.toggleChecked()"
+			ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled"/>
+		{{ rocksWmsPointsVM.wmsPointsService.masterChecked ? 'Deselect' : 'Select' }} all layers
+	</label>
+</div>
 
-	</div>
+<div ng-repeat="legend in rocksWmsPointsVM.wmsPointsService.legendData" class='rocks-points-legend-item'>
 
-	<a class="btn btn-default"
-	   style="width: 100%; margin-top: 20px"
-	   ng-click="rocksWmsPointsVM.wmsPointsService.updatePointsLayer()"
-	   ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled"
-	   href="javascript:;">
-		<i class="fa fa-refresh fa-lg"></i>
-		Update layers
-	</a>
+	<label>
+		<input
+		type="checkbox"
+		ng-model="legend.isSelected"
+		ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled" />
+		<img ng-src="{{legend.legendUrl}}" alt="{{legend}} legend icon" />
+	</label>
 
 </div>
 
-<wms-inspector-panel></wms-inspector-panel>
+<a class="btn btn-default"
+   style="width: 100%; margin-top: 20px"
+   ng-click="rocksWmsPointsVM.wmsPointsService.updatePointsLayer()"
+   ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled"
+   href="javascript:;">
+	<i class="fa fa-refresh fa-lg"></i>
+	Update layers
+</a>

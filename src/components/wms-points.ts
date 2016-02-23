@@ -21,7 +21,7 @@ module rpComponents.pointsService {
     export interface IWmsPointsService {
         layers: [any];
         legendData: any;
-        init(viewer: any): void;
+        init(): void;
         togglePoints(): boolean;
     }
 
@@ -50,12 +50,16 @@ module rpComponents.pointsService {
             public gwsUtilService: rpComponents.gwsUtilService.IGwsUtilService,
             public rocksConfigService: rpComponents.config.IRocksConfigService,
             public wmsInspectorState: rpComponents.wmsInspectorState.IWmsInspectorState
-        ) {}
+        ) {
+            this.$rootScope.$on('rocks.config.ready', () => {
+                this.init();
+            });
+        }
 
-        public init(viewer: any): void{
+        public init(): void{
 
             this.wmsServiceUrl = this.rocksConfigService.config.geoserverWmsUrl;
-            this.viewer = viewer;
+            this.viewer = this.rocksConfigService.viewer;
             this.restrictedBounds = Cesium.Rectangle.fromDegrees(109, -45, 158, -8);
 
             // build our legend param string from config
@@ -69,35 +73,6 @@ module rpComponents.pointsService {
             this.gwsUtilService.getWmsLayerNames().then((layers: any) => {
                 this.layers = layers;
                 this.getLegendData();
-            });
-
-            // register listener for pointInspector
-            this.$rootScope.$on("viewer.click.left", (event: any, data: any) => {
-
-                data.degrees = {
-                    lat: Cesium.Math.toDegrees(data.cartographic.latitude),
-                    lon: Cesium.Math.toDegrees(data.cartographic.longitude)
-                };
-
-                if(this.inspectorEnabled && data.hasOwnProperty('cartographic')){
-
-                    this.wmsInspectorState.targetGeom = data;
-
-                    this.wmsInspectorState.view = "LAYERSELECT";
-                    this.wmsInspectorState.cameraHeight = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height;
-
-
-
-                    console.log(this.viewer.imageryLayers);
-
-                    for(var i = 0; i < this.viewer.imageryLayers.length; i++){
-
-                        console.log(this.viewer.imageryLayers.get(i).imageryProvider.layers);
-
-                    }
-
-                }
-
             });
         }
 
@@ -119,10 +94,6 @@ module rpComponents.pointsService {
             for(var legend in this.legendData){
                 this.legendData[legend]['isSelected'] = this.masterChecked;
             }
-        }
-
-        public togglePointInspector(): void {
-            this.inspectorEnabled != this.inspectorEnabled;
         }
 
         getLegendData(): void{
@@ -149,6 +120,8 @@ module rpComponents.pointsService {
             if(this.wmsLayer){
                 this.viewer.imageryLayers.remove(this.wmsLayer);
             }
+
+            ga('send', 'event', 'explorer-rock-properties', 'click', 'update wms points layer: '+targetLayers.toString());
 
             this.wmsLayer = this.viewer.imageryLayers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
                 url : this.wmsServiceUrl,

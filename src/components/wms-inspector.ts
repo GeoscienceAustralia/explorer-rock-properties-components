@@ -1,6 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-declare var Cesium: any;
+declare var Cesium: any, ga: any;
 
 module rpComponents.wmsInspectorService {
 
@@ -23,6 +23,7 @@ module rpComponents.wmsInspectorService {
         featureInfo: any;
         isLoading: boolean;
         loadingSpinner: any;
+        inspectorEnabled: boolean;
     }
     export class WmsInspectorService implements IWmsInspectorService {
 
@@ -31,7 +32,7 @@ module rpComponents.wmsInspectorService {
         public featureInfo: any;
         public isLoading: boolean = false;
         public loadingSpinner: any;
-        rocksConfig: any;
+        public inspectorEnabled: boolean;
 
         URL_EXCLUDE: string = "?SERVICE=WMS&";
         SURFACE_GEO: string = "GA_Surface_Geology_of_Australia";
@@ -42,8 +43,10 @@ module rpComponents.wmsInspectorService {
             "wmsInspectorState",
             "assetsService",
             "configService",
+            "rocksConfigService",
             "loadingSpinnerService",
-            "gwsUtilService"
+            "gwsUtilService",
+            "rocksClipShipService"
         ];
 
         constructor(
@@ -52,22 +55,60 @@ module rpComponents.wmsInspectorService {
             public wmsInspectorState: rpComponents.wmsInspectorState.IWmsInspectorState,
             public assetsService: any,
             public configService: any,
+            public rocksConfigService: rpComponents.config.IRocksConfigService,
             public loadingSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
-            public gwsUtilService: rpComponents.gwsUtilService.IGwsUtilService
+            public gwsUtilService: rpComponents.gwsUtilService.IGwsUtilService,
+            public rocksClipShipService: rpComponents.clipShipService.IRocksClipShipService
         ) {
-            // load feature classes
-            assetsService.getReferenceFeatureClasses().then((features: any) => {
-                console.log(features);
-                this.features = features;
+            // register listener for pointInspector
+            this.$rootScope.$on("viewer.click.left", (event: any, data: any) => {
+
+                data.degrees = {
+                    lat: Cesium.Math.toDegrees(data.cartographic.latitude),
+                    lon: Cesium.Math.toDegrees(data.cartographic.longitude)
+                };
+
+                // TODO should flasher for this so user knows why
+                // (we don't want inspector interuppting clipship drawing)
+                console.log("this.rocksClipShipService.isDrawing");
+                console.log(this.rocksClipShipService.isDrawing);
+                if(this.rocksClipShipService.isDrawing){
+                    return;
+                }
+
+                if(this.inspectorEnabled && data.hasOwnProperty('cartographic')){
+
+                    // make sure panel is visible
+                    this.$rootScope.$broadcast("rocks.accordion.update", "wmsInspector");
+                    this.$rootScope.$broadcast("toolbar.toggle.update", {linked: false, key: "rocksClusters", isActive: true});
+
+                    this.wmsInspectorState.targetGeom = data;
+                    this.wmsInspectorState.view = "LAYERSELECT";
+                    this.wmsInspectorState.cameraHeight = Cesium.Ellipsoid.WGS84.cartesianToCartographic(
+                        this.rocksConfigService.viewer.camera.position
+                    ).height;
+                }
+
             });
 
-            // setup rocks feature
-            configService.getConfig().then((config: any) => {
-                this.rocksConfig = config.rockProps;
+            this.$rootScope.$on('rocks.config.ready', () => {
+
+                // load feature classes
+                assetsService.getReferenceFeatureClasses().then((features: any) => {
+                    console.log(features);
+                    this.features = features;
+                });
+
+                // init rocks feature
                 this.rocksFeature = {
-                    wmsUrl: this.rocksConfig.geoserverWmsUrl
-                };
+                    wmsUrl: this.rocksConfigService.config.geoserverWmsUrl,
+                    name: 'Rock Properties Layer'
+                }
             });
+        }
+
+        public togglePointInspector(): void {
+            this.inspectorEnabled != this.inspectorEnabled;
         }
 
         // TODO we should restrict the query to visible layers
@@ -76,7 +117,10 @@ module rpComponents.wmsInspectorService {
             if(!this.rocksFeature.hasOwnProperty('layers') && this.gwsUtilService.wmsLayerNames){
                 this.rocksFeature.layers = [];
                 for(var i = 0; i < this.gwsUtilService.wmsLayerNames.length; i++){
-                   this.rocksFeature.layers.push(this.rocksConfig.geoserverWmsLayerPrefix + this.gwsUtilService.wmsLayerNames[i]);
+                   this.rocksFeature.layers.push(
+                       this.rocksConfigService.config.geoserverWmsLayerPrefix +
+                       this.gwsUtilService.wmsLayerNames[i]
+                   );
                }
             }
 
@@ -85,11 +129,7 @@ module rpComponents.wmsInspectorService {
 
         public queryFeature(feature: any): void {
 
-            console.log("queryFeature");
-            console.log(feature);
-
-            // TODO analytics
-            //ga('send', 'event', 'rock-properties', 'click', 'wms point inspected: '+feature.name);
+            ga('send', 'event', 'explorer-rock-properties', 'click', 'wms inspector query: '+feature.name);
 
             // set view
             this.wmsInspectorState.view = "FEATUREINFO";
@@ -136,7 +176,7 @@ module rpComponents.wmsInspectorService {
 
                 '&QUERY_LAYERS='+ targetLayers +
                 '&INFO_FORMAT=text%2Fhtml'+
-                '&FEATURE_COUNT=50'+
+                '&FEATURE_COUNT=100'+
                 '&WIDTH=2' +
                 '&HEIGHT=2'+
                 '&X=1'+
@@ -144,30 +184,18 @@ module rpComponents.wmsInspectorService {
                 '&TRANSPARENT=true'+
                 '&EXCEPTIONS=application%2Fvnd.ogc.se_xml';
 
-            console.log("QUERY");
-            console.log(targetUrl+queryString);
-
             // send the query
             this.$http.get(targetUrl + queryString).success((data: any) => {
 
                 this.featureInfo = data;
-                //wmsInspectorState.isOn = true;
-
                 this.toggleLoading();
-
             })
             .error(function(data: any, status: any, headers: any, config: any){
-
                 console.log("Couldn't load WMS GetFeatureInfo");
                 this.featureInfo = "<h5>Couldn't load WMS GetFeatureInfo for this layer.</h5><p>You may not be able to access this function for some layers.</p>";
-
                 this.toggleLoading();
-                //wmsInspectorState.isOn = true;
             });
-
-
         }
-
 
         public toggleLoading(): void {
 
@@ -188,9 +216,6 @@ module rpComponents.wmsInspectorService {
         }
     }
 
-
-
-
     angular
         .module('explorer.rockproperties.inspector', ['explorer.assets'])
         .factory("wmsInspectorService", [
@@ -199,16 +224,20 @@ module rpComponents.wmsInspectorService {
             "wmsInspectorState",
             "assetsService",
             "configService",
+            "rocksConfigService",
             "loadingSpinnerService",
             "gwsUtilService",
+            "rocksClipShipService",
             (
                 $rootScope: ng.IRootScopeService,
                 $http: ng.IHttpService,
                 wmsInspectorState: rpComponents.wmsInspectorState.IWmsInspectorState,
                 assetsService: any,
                 configService: any,
+                rocksConfigService: rpComponents.config.IRocksConfigService,
                 loadingSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
-                gwsUtilService: rpComponents.gwsUtilService.IGwsUtilService
+                gwsUtilService: rpComponents.gwsUtilService.IGwsUtilService,
+                rocksClipShipService: rpComponents.clipShipService.IRocksClipShipService
             ) =>
                 new rpComponents.wmsInspectorService.WmsInspectorService(
                     $rootScope,
@@ -216,8 +245,10 @@ module rpComponents.wmsInspectorService {
                     wmsInspectorState,
                     assetsService,
                     configService,
+                    rocksConfigService,
                     loadingSpinnerService,
-                    gwsUtilService
+                    gwsUtilService,
+                    rocksClipShipService
                 )])
         .controller("wmsInspectorCtrl", rpComponents.wmsInspectorService.WmsInspectorCtrl)
         .directive("wmsInspectorPanel", function(): ng.IDirective {

@@ -13,11 +13,16 @@ module rpComponents.controlPanel {
     export class RocksPanelCtrl implements IRocksPanelCtrl {
 
         targetPanel: string = '';
-        static $inject = ["$scope", "rocksPanelService"];
+        static $inject = ["$scope", "rocksPanelService", "wmsInspectorService"];
         constructor(
             public $scope: ng.IScope,
-            public rocksPanelService: rpComponents.controlPanel.IRocksPanelService
-        ){}
+            public rocksPanelService: rpComponents.controlPanel.IRocksPanelService,
+            public wmsInspectorService: rpComponents.wmsInspectorService.IWmsInspectorService
+        ){
+            this.$scope.$on("rocks.accordion.update", (event: any, data: any) => {
+                this.targetPanel = data;
+            });
+        }
 
         setTargetPanel(targetPanel: string): void {
             this.targetPanel = (this.targetPanel != targetPanel) ? targetPanel : "";
@@ -59,11 +64,8 @@ module rpComponents.controlPanel {
          * @param pickEnabled
          */
         public init(viewer: any, config: any){
-
             this.viewer = viewer;
-            this.rocksConfigService.setConfig(config);
-            this.clusterService.init(viewer);
-            this.wmsPointsService.init(viewer);
+            this.rocksConfigService.setConfig(config, viewer);
         }
 
         public toggleClusters(): void {

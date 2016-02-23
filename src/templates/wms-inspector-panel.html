@@ -1,4 +1,9 @@
 
+<div ng-show="wmsInspectorVM.wmsInspectorState.view == 'INTRO'">
+	<div ng-if="wmsInspectorVM.wmsInspectorService.inspectorEnabled">Click the map to get feature info.</div>
+	<div ng-if="!wmsInspectorVM.wmsInspectorService.inspectorEnabled">Enable WMS Inspector to interrogate WMS layers.</div>
+</div>
+
 <div ng-show="wmsInspectorVM.wmsInspectorState.view == 'LAYERSELECT'">
 
 	<p style="margin: 10px 0px;" tooltip="Approx 30m accuracy">
@@ -28,7 +33,7 @@
 
 	<a class="btn btn-default"
 	   style="width: 100%; margin-top: 20px"
-	   ng-click="wmsInspectorVM.wmsInspectorState.view = 'LEGEND'"
+	   ng-click="wmsInspectorVM.wmsInspectorState.view = 'INTRO'"
 	   href="javascript:;">
 		<i class="fa fa-times fa-lg"></i>
 		Cancel
@@ -70,7 +75,7 @@
 
 		<a class="btn btn-default"
 		   style="width: 49%; margin-top: 20px"
-		   ng-click="wmsInspectorVM.wmsInspectorState.view = 'LEGEND'"
+		   ng-click="wmsInspectorVM.wmsInspectorState.view = 'INTRO'"
 		   href="javascript:;">
 			<i class="fa fa-times fa-lg"></i>
 			Cancel

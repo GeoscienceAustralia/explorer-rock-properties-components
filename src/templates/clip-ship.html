@@ -24,13 +24,22 @@
 
 			<div style="padding: 5px; margin-top: 10px; background: #f0f0f0; border-radius: 3px;">
 				<label>
-					<input type="checkbox" ng-model="masterCheck" ng-disabled="hasPropertyFilter" ng-change="rocksClipShipVM.rocksFiltersService.setAllExportSelected(masterCheck)" />
+					<input
+						type="checkbox"
+						ng-model="masterCheck"
+						ng-disabled="hasPropertyFilter"
+						ng-change="rocksClipShipVM.rocksFiltersService.setAllExportSelected(masterCheck)" />
 					{{ masterCheck ? 'Deselect' : 'Select' }} All
 				</label>
 			</div>
 
 			<label style="margin-left: 25px;" class="checkbox" ng-repeat="property in rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions">
-				<input type="checkbox" value="property.isSelected" ng-model="property.isSelected" ng-checked="masterCheck" ng-disabled="hasPropertyFilter">
+				<input
+					type="checkbox"
+					value="property.isSelected"
+					ng-model="property.isSelected"
+					ng-checked="masterCheck"
+					ng-disabled="hasPropertyFilter">
 				{{ property.name }}
 			</label>
 
@@ -54,13 +63,19 @@
 		</a>
 
 		<div style="margin-top: 20px;">
-			<button type="button" class="btn btn-default" ng-click="rocksClipShipVM.rocksClipShipService.step = 'startDraw'" title="Cancel Download" style="width: 40%; float: left;">Cancel</button>
-			<button type="button"
-					class="btn btn-default focusMe"
-					ng-click="rocksClipShipVM.startClipShip()"
-					style="width: 40%; float: right"
-					title="Select one or more reference feature classes before continuing."
-					ng-disabled="(rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions | noClipSelected) || (!rocksClipShipVM.rocksClipShipService.targetFormat)">Next</button>
+			<button
+				type="button"
+				class="btn btn-default"
+				ng-click="rocksClipShipVM.rocksClipShipService.step = 'startDraw'; rocksClipShipVM.rocksClipShipService.isDrawing = false"
+				title="Cancel Download"
+				style="width: 40%; float: left;">Cancel</button>
+			<button
+				type="button"
+				class="btn btn-default focusMe"
+				ng-click="rocksClipShipVM.startClipShip()"
+				style="width: 40%; float: right"
+				title="Select one or more reference feature classes before continuing."
+				ng-disabled="(rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions | noClipSelected) || (!rocksClipShipVM.rocksClipShipService.targetFormat)">Next</button>
 		</div>
 
 	</div>
@@ -81,11 +96,22 @@
 			<i class="fa fa-info-circle"></i> Large data sets may take several minutes to export.
 		</p>
 
-		<a class="btn btn-default" target="_blank" href="{{rocksClipShipVM.rocksQueryBuilderExport.exportUrl}}" ng-click="rocksClipShipVM.rocksClipShipService.step = 'startDraw'" style="width: 100%; margin-top: 30px;" role="button">
+		<a
+			class="btn btn-default"
+			target="_blank"
+			href="{{rocksClipShipVM.rocksQueryBuilderExport.exportUrl}}"
+			ng-click="rocksClipShipVM.rocksClipShipService.step = 'startDraw'; rocksClipShipVM.rocksClipShipService.isDrawing = false"
+			style="width: 100%; margin-top: 30px;"
+			role="button">
 			<i class="fa fa-download"></i> Download {{ rocksClipShipVM.rocksClipShipService.targetFormat }}
 		</a>
 
-		<a class="btn btn-default" href="javascript:;" ng-click="rocksClipShipVM.rocksClipShipService.step = 'selectFeatures'" style="width: 100%; margin-top: 10px;" role="button">
+		<a
+			class="btn btn-default"
+			href="javascript:;"
+			ng-click="rocksClipShipVM.rocksClipShipService.step = 'selectFeatures'"
+			style="width: 100%; margin-top: 10px;"
+			role="button">
 			<i class="fa fa-arrow-left"></i> Back
 		</a>
 

@@ -38,6 +38,7 @@ Example config:
 	"geoserverWmsUrl": "http://www.ga.gov.au/geophysics-rockpropertypub-gws/ga_rock_properties_wms/wms",
 	"geoserverWmsVersion": "1.3.0",
 	"geoserverWfsUrl": "http://www.ga.gov.au/geophysics-rockpropertypub-gws/ga_rock_properties_wfs/wfs/ows",
+	"geoserverWmsLayerPrefix": "ga_rock_properties_wms:",
 	"geoserverWfsVersion": "1.3.0",
 	"geoserverWfsExportParams": {
 	  "service": "wfs",

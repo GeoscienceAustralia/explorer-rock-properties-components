@@ -25,7 +25,7 @@ module rpComponents.clusterService {
         serviceUrl: string;
         clustersCollection: any;
 
-        init(viewer: any): void;
+        init(): void;
         toggleClusters(): boolean;
         getClusters(heightIndex: number, extent: any): any;
         reCluster(): void;
@@ -67,7 +67,11 @@ module rpComponents.clusterService {
             public clusterChartService: rpComponents.chartService.IClusterChartService,
             public loadingSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
             public rocksConfigService: rpComponents.config.IRocksConfigService
-        ) {}
+        ) {
+            this.$rootScope.$on('rocks.config.ready', () => {
+                this.init();
+            });
+        }
 
         /**
          *
@@ -75,10 +79,10 @@ module rpComponents.clusterService {
          * @param serviceUrl
          * @param usePicking
          */
-        init(viewer: any): void {
+        init(): void {
 
-            this.viewer = viewer;
-            this.zoomLevelService.viewer = viewer;
+            this.viewer = this.rocksConfigService.viewer;
+            this.zoomLevelService.viewer = this.rocksConfigService.viewer;
             this.serviceUrl = this.rocksConfigService.config.clusterServiceUrl;
 
             this.$rootScope.$on('rocks.clusters.update', () => {

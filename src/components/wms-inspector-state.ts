@@ -13,14 +13,14 @@ module rpComponents.wmsInspectorState {
     }
 
     /*
-        The WMS points panel can be in 1 of 3 view states:
-        1. LEGEND - the default/home shows available service layers
+        The WMS inspector panel can be in 1 of 3 view states:
+        1. INTRO - the default/home shows prompt
         2. LAYERSELECT - user presented with layers to interrogate with GetFeatureInfo when
         they have clicked a point on the map
         3. FEATUREINFO - view to present raw html returned by GetFeatureInfo
      */
     export class WmsInspectorState implements IWmsInspectorState {
-        public view: string = "LEGEND";
+        public view: string = "INTRO";
         public targetGeom: number;
         public cameraHeight: number;
     }

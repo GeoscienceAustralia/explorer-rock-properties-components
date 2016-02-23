@@ -6,11 +6,14 @@ module rpComponents.config {
 
     export interface IRocksConfigService {
         config: any;
-        setConfig(config: any): void;
+        viewer: any;
+        setConfig(config: any, viewer: any): void;
     }
 
     export class RocksConfigService implements IRocksConfigService {
-        config: any;
+
+        public config: any;
+        public viewer: any;
 
         static $inject = [
             "$rootScope"
@@ -19,8 +22,9 @@ module rpComponents.config {
             public $rootScope: ng.IRootScopeService
         ){}
 
-        setConfig(config: any): void {
+        setConfig(config: any, viewer: any): void {
             this.config = config;
+            this.viewer = viewer;
             this.$rootScope.$broadcast("rocks.config.ready");
         }
     }
