@@ -28,7 +28,7 @@ module rpComponents.zoom {
     export class ZoomLevelService implements IZoomLevelService {
 
         viewer: any;
-        // Arbitrary height indexes: < 5000 is 0, > 500 && < 10000 is 1 etc.
+        // Arbitrary height indexes: < 5000 is 0, > 5000 && < 10000 is 1 etc.
         zoomLevels: any = [5000, 10000, 20000, 40000, 750000, 1500000, 2500000, 3500000, 5500000, 6500000, 8000000];
         nextIndex: number;
         previousIndex: number;
@@ -43,10 +43,7 @@ module rpComponents.zoom {
             "$rootScope"
         ];
 
-        constructor(public $rootScope:ng.IRootScopeService) {
-
-        }
-
+        constructor(public $rootScope:ng.IRootScopeService) {}
         public moveEndHandler = () => {
 
             this.nextIndex = this.getIndex(Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
@@ -55,6 +52,9 @@ module rpComponents.zoom {
             if(this.previousIndex > -1 && this.previousIndex != this.nextIndex){
                 this.$rootScope.$broadcast('rocks.clusters.update', this.nextIndex);
             }
+
+            console.log("HEIGHT");
+            console.log(Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
 
             this.previousIndex = this.nextIndex;
         };

@@ -1,0 +1,81 @@
+
+<div ng-show="wmsInspectorVM.wmsInspectorState.view == 'LAYERSELECT'">
+
+	<p style="margin: 10px 0px;" tooltip="Approx 30m accuracy">
+		Select a layer to query:
+		<code>
+			{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lat | number : 2}},
+			{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lon | number : 2}}
+		</code>
+	</p>
+
+	<a
+		class="btn btn-default"
+		style="width: 100%; margin: 2px 0px"
+		ng-click="wmsInspectorVM.wmsInspectorService.queryRocks()"
+		href="javascript:;">
+		Rock Properties Data
+	</a>
+
+	<a
+		ng-repeat="feature in wmsInspectorVM.wmsInspectorService.features"
+		class="btn btn-default"
+	   	style="width: 100%; margin: 2px 0px"
+	   	ng-click="wmsInspectorVM.wmsInspectorService.queryFeature(feature)"
+	   	href="javascript:;">
+		{{feature.name}}
+	</a>
+
+	<a class="btn btn-default"
+	   style="width: 100%; margin-top: 20px"
+	   ng-click="wmsInspectorVM.wmsInspectorState.view = 'LEGEND'"
+	   href="javascript:;">
+		<i class="fa fa-times fa-lg"></i>
+		Cancel
+	</a>
+
+</div>
+
+
+<div ng-show="wmsInspectorVM.wmsInspectorState.view == 'FEATUREINFO'">
+
+	<div ng-show="wmsInspectorVM.wmsInspectorService.isLoading">
+		<div id="rocks-inspector-loading"></div>
+	</div>
+
+	<div ng-hide="wmsInspectorVM.wmsInspectorService.isLoading">
+
+		<p style="margin: 10px 0px;" tooltip="Approx 30m accuracy">
+			Feature Info for:
+			<code>
+				{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lat | number : 2}},
+				{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lon | number : 2}}
+			</code>
+		</p>
+
+		<!-- put html here.. -->
+		<div ng-bind-html="wmsInspectorVM.wmsInspectorService.featureInfo"></div>
+
+	</div>
+
+	<div>
+
+		<a class="btn btn-default"
+		   style="width: 49%; margin-top: 20px"
+		   ng-click="wmsInspectorVM.wmsInspectorState.view = 'LAYERSELECT'"
+		   href="javascript:;">
+			<i class="fa fa-arrow-left fa-lg"></i>
+			Back
+		</a>
+
+		<a class="btn btn-default"
+		   style="width: 49%; margin-top: 20px"
+		   ng-click="wmsInspectorVM.wmsInspectorState.view = 'LEGEND'"
+		   href="javascript:;">
+			<i class="fa fa-times fa-lg"></i>
+			Cancel
+		</a>
+
+	</div>
+
+</div>

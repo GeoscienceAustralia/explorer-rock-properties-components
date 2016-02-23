@@ -10,7 +10,7 @@ module rpComponents.gwsUtilService {
     'use strict';
 
     export interface IGwsUtilService {
-
+        wmsLayerNames: string[];
         getWmsLayerNames(): ng.IPromise<Object>;
         getWfsFeatureTypeNames(): ng.IPromise<Object>;
 
@@ -18,6 +18,8 @@ module rpComponents.gwsUtilService {
     }
 
     export class GwsUtilService implements IGwsUtilService {
+
+        public wmsLayerNames: string[];
 
         static $inject = [
             "$q",
@@ -75,8 +77,8 @@ module rpComponents.gwsUtilService {
                 + this.rocksConfigService.config.geoserverWmsVersion
             ).
                 success((data: any, status: any, headers: any, config: any) => {
-                    var layerNames: any = this.getLayerNamesFromWmsCapsJson(this.xmlToJson($.parseXML(data)));
-                    deferred.resolve(layerNames);
+                    this.wmsLayerNames = this.getLayerNamesFromWmsCapsJson(this.xmlToJson($.parseXML(data)));
+                    deferred.resolve(this.wmsLayerNames);
                 }).
 
                 error(function(err){

@@ -31,6 +31,12 @@
 
 	</div>
 
+	<div class="rocks-accordion-content" ng-show="controlPanelVM.targetPanel == 'wmsInspector'">
+
+		Inspector
+
+	</div>
+
 	<div class="rocks-accordion">
 		<div class="title w100" ng-click="controlPanelVM.setTargetPanel('clipShip')">
 			<i class="fa fa-{{ controlPanelVM.targetPanel == 'clipShip' ? 'minus' : 'plus' }}"></i>
