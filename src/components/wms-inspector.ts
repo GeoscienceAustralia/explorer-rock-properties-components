@@ -70,8 +70,6 @@ module rpComponents.wmsInspectorService {
 
                 // TODO should flasher for this so user knows why
                 // (we don't want inspector interuppting clipship drawing)
-                console.log("this.rocksClipShipService.isDrawing");
-                console.log(this.rocksClipShipService.isDrawing);
                 if(this.rocksClipShipService.isDrawing){
                     return;
                 }

@@ -24,11 +24,6 @@ var rpComponents;
                     targetChartId: false
                 });
             };
-            /**
-             *
-             * @param cluster
-             *
-             */
             ClusterChartService.prototype.buildChart = function (dataset) {
                 document.getElementById("cluster-summary-chart-d3").innerHTML = "";
                 // trigger open/display a chart div
@@ -436,18 +431,19 @@ var rpComponents;
                     var clusterInstances = [];
                     var labelCollection = new Cesium.LabelCollection();
                     _this.getClusters().then(function (response) {
-                        if (response.data) {
-                            var clusters = response.data;
-                            // use d3 to build a scale for our extrude heights; we'll build a diff scale
+                        if (response.data && response.data.features) {
+                            var clusters = response.data.features;
+                            // use d3 to build a scale for our extrude heights; we need to build a diff scale
                             // for each zoom level, as we can't guarantee they'll start at the top and work down
-                            _this.clusterRangeMeta.maxCount = d3.max(clusters, function (d) { return d.count; });
+                            // (if we add persistence)
+                            _this.clusterRangeMeta.maxCount = d3.max(clusters, function (d) { return d.properties.count; });
                             _this.clusterRangeMeta.scale = d3.scale.linear()
                                 .domain([0, _this.clusterRangeMeta.maxCount])
                                 .range([0, _this.clusterRangeMeta.maxExtrudeHeight]);
                             for (var i = 0; i < clusters.length; i++) {
                                 // tag id with type for pick handling
-                                clusters[i]['featureType'] = 'rockPropsCluster';
-                                var clusterProps = _this.computeClusterAttributes(clusters[i].count);
+                                clusters[i].properties['featureType'] = 'rockPropsCluster';
+                                var clusterProps = _this.computeClusterAttributes(clusters[i].properties.count);
                                 clusterInstances.push(_this.buildClusterInstance(clusters[i], clusterProps));
                                 labelCollection.add(_this.buildLabel(clusters[i], clusterProps));
                             }
@@ -466,14 +462,17 @@ var rpComponents;
             /**
              *
              * @param viewer
-             * @param serviceUrl
+             * @param summaryService
              * @param usePicking
              */
             ClusterService.prototype.init = function () {
                 var _this = this;
                 this.viewer = this.rocksConfigService.viewer;
                 this.zoomLevelService.viewer = this.rocksConfigService.viewer;
-                this.serviceUrl = this.rocksConfigService.config.clusterServiceUrl;
+                // real service
+                //this.serviceUrl = this.rocksConfigService.config.rocksServiceUrl;
+                // mock
+                this.serviceUrl = this.rocksConfigService.config.mockRocksServiceUrl;
                 this.$rootScope.$on('rocks.clusters.update', function () {
                     _this.reCluster();
                 });
@@ -482,11 +481,10 @@ var rpComponents;
                     this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
                     this.pickHandlerAction = function (movement) {
                         var pick = _this.viewer.scene.pick(movement.position);
-                        // TODO revise cluster pick validation when we decide on format for service
-                        if (Cesium.defined(pick) && Cesium.defined(pick.id) && pick.id.hasOwnProperty('featureType') && pick.id.featureType == 'rockPropsCluster') {
+                        if (Cesium.defined(pick) && Cesium.defined(pick.id) && pick.id.hasOwnProperty('properties') && pick.id.properties.featureType == 'rockPropsCluster') {
                             _this.clearHighlighted();
                             _this.targetId = pick.id;
-                            _this.queryCluster(_this.targetId);
+                            _this.queryCluster(_this.targetId, movement.position);
                             _this.setHighlighted(_this.targetId, true);
                         }
                     };
@@ -537,17 +535,19 @@ var rpComponents;
              * @returns {IHttpPromise<T>}
              */
             ClusterService.prototype.getClusters = function () {
-                // debug
+                // args
+                var args = '?zoom=' + this.zoomLevelService.nextIndex +
+                    '&xmin=' + this.zoomLevelService.getViewExtent(100).west +
+                    '&xmax=' + this.zoomLevelService.getViewExtent(100).east +
+                    '&ymin=' + this.zoomLevelService.getViewExtent(100).south +
+                    '&ymax=' + this.zoomLevelService.getViewExtent(100).north;
+                console.log("summary query: " + this.serviceUrl + args);
                 return this.$http({
                     method: 'GET',
-                    url: this.serviceUrl + "/" + this.zoomLevelService.nextIndex + '.json',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    data: {
-                        heightIndex: this.zoomLevelService.nextIndex,
-                        extent: this.zoomLevelService.getViewExtent(100)
-                    }
+                    // real service
+                    //url: this.serviceUrl + 'summary' + args
+                    // mock
+                    url: this.serviceUrl + 'mock-summary-' + this.zoomLevelService.nextIndex + '.json'
                 });
             };
             /**
@@ -556,7 +556,7 @@ var rpComponents;
              *
              * @param cluster
              */
-            ClusterService.prototype.queryCluster = function (cluster) {
+            ClusterService.prototype.queryCluster = function (cluster, position) {
                 var _this = this;
                 //  spinner for summary chart load
                 if (this.summarySpinner) {
@@ -571,17 +571,16 @@ var rpComponents;
                     });
                     this.summarySpinner();
                 }
-                // DEBUG
-                // TODO update once establish cluster summary service
+                var carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.pickEllipsoid(position));
+                var args = '?zoom=' + this.zoomLevelService.nextIndex +
+                    '&x=' + Cesium.Math.toDegrees(carto.longitude) +
+                    '&y=' + Cesium.Math.toDegrees(carto.latitude);
+                var query = this.serviceUrl + 'query' + args;
+                console.log("query");
+                console.log(query);
                 this.$http({
                     method: 'GET',
-                    url: this.serviceUrl + '/cluster.json',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    data: {
-                        targetCluster: cluster
-                    }
+                    url: this.serviceUrl + '/cluster.json'
                 }).then(function (response) {
                     if (response.hasOwnProperty('data')) {
                         _this.clusterChartService.buildChart(response.data);
@@ -603,7 +602,7 @@ var rpComponents;
             ClusterService.prototype.buildClusterInstance = function (cluster, clusterProps) {
                 return new Cesium.GeometryInstance({
                     geometry: new Cesium.CircleGeometry({
-                        center: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat),
+                        center: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1]),
                         radius: clusterProps.radius,
                         vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
                         extrudedHeight: clusterProps.extrudeHeight
@@ -616,8 +615,8 @@ var rpComponents;
             };
             ClusterService.prototype.buildLabel = function (cluster, clusterProps) {
                 return {
-                    position: Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 100 + clusterProps.extrudeHeight),
-                    text: cluster.count.toString(),
+                    position: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1], 100 + clusterProps.extrudeHeight),
+                    text: cluster.properties.count.toString(),
                     fillColor: Cesium.Color.BLACK,
                     outlineColor: Cesium.Color.RED,
                     // TODO review labelling
@@ -628,8 +627,9 @@ var rpComponents;
             };
             ClusterService.prototype.computeClusterAttributes = function (count) {
                 var attrs = {
-                    radius: 100000 * (this.zoomLevelService.nextIndex / 10),
-                    extrudeHeight: this.clusterRangeMeta.scale(count) * (this.zoomLevelService.nextIndex / 10)
+                    // tweak these to scale cluster size/extrude on zoom
+                    radius: 100000 / (this.zoomLevelService.nextIndex / 5),
+                    extrudeHeight: this.clusterRangeMeta.scale(count) / (this.zoomLevelService.nextIndex / 3)
                 };
                 if (count < 100) {
                     attrs.color = Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5);
@@ -1276,8 +1276,6 @@ var rpComponents;
                     };
                     // TODO should flasher for this so user knows why
                     // (we don't want inspector interuppting clipship drawing)
-                    console.log("this.rocksClipShipService.isDrawing");
-                    console.log(_this.rocksClipShipService.isDrawing);
                     if (_this.rocksClipShipService.isDrawing) {
                         return;
                     }
@@ -1555,7 +1553,25 @@ var rpComponents;
                 var _this = this;
                 this.$rootScope = $rootScope;
                 // Arbitrary height indexes: < 5000 is 0, > 5000 && < 10000 is 1 etc.
-                this.zoomLevels = [5000, 10000, 20000, 40000, 750000, 1500000, 2500000, 3500000, 5500000, 6500000, 8000000];
+                this.zoomLevels = [
+                    1000,
+                    2000,
+                    5000,
+                    20000,
+                    50000,
+                    100000,
+                    500000,
+                    1000000,
+                    3000000,
+                    5000000,
+                    7500000,
+                    // these's tile may be a broad to be meaningful
+                    8400000,
+                    8500000,
+                    9000000,
+                    9500000,
+                    10000000
+                ];
                 this.defaultExtent = {
                     "west": 109,
                     "south": -45,
@@ -1583,7 +1599,7 @@ var rpComponents;
             ZoomLevelService.prototype.getIndex = function (height) {
                 for (var i = 0; i < this.zoomLevels.length; i++) {
                     if (height < this.zoomLevels[i]) {
-                        return i;
+                        return this.zoomLevels.length - i;
                     }
                 }
                 return this.zoomLevels.length - 1;

@@ -41,11 +41,7 @@ module rpComponents.chartService {
             });
         }
 
-        /**
-         *
-         * @param cluster
-         *
-         */
+
         public buildChart(dataset: any): any {
 
             document.getElementById("cluster-summary-chart-d3").innerHTML = "";

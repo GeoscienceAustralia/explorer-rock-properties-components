@@ -56,6 +56,9 @@ Example config:
 	  "HEIGHT": 20,
 	  "legend_options": "dpi:160;forcelabels:on;fontSize:7"
 	},
+	"rocksSummaryUrl": "http://ga.gov.au/explorer-web/service/rocks/summary",
+    "rocksQueryUrl": "http://ga.gov.au/explorer-web/service/rocks/query",
+    "rocksFeaturesUrl": "http://ga.gov.au/explorer-web/service/rocks/features",
 	"geoserverDashboardUrl": "http://www.ga.gov.au/geophysics-rockpropertypub-gws/web/?wicket:bookmarkablePage=:org.geoserver.web.demo.MapPreviewPage",
 	"filterNamesServiceUrl": "http://www.ga.gov.au/explorer-web/service/rockprops/filters"
   }

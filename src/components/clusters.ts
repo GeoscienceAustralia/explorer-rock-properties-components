@@ -76,14 +76,19 @@ module rpComponents.clusterService {
         /**
          *
          * @param viewer
-         * @param serviceUrl
+         * @param summaryService
          * @param usePicking
          */
         init(): void {
 
             this.viewer = this.rocksConfigService.viewer;
             this.zoomLevelService.viewer = this.rocksConfigService.viewer;
-            this.serviceUrl = this.rocksConfigService.config.clusterServiceUrl;
+
+            // real service
+            //this.serviceUrl = this.rocksConfigService.config.rocksServiceUrl;
+
+            // mock
+            this.serviceUrl = this.rocksConfigService.config.mockRocksServiceUrl;
 
             this.$rootScope.$on('rocks.clusters.update', () => {
                 this.reCluster();
@@ -97,11 +102,10 @@ module rpComponents.clusterService {
 
                     var pick = this.viewer.scene.pick(movement.position);
 
-                    // TODO revise cluster pick validation when we decide on format for service
-                    if (Cesium.defined(pick) && Cesium.defined(pick.id) && pick.id.hasOwnProperty('featureType') && pick.id.featureType == 'rockPropsCluster') {
+                    if (Cesium.defined(pick) && Cesium.defined(pick.id) && pick.id.hasOwnProperty('properties') && pick.id.properties.featureType == 'rockPropsCluster') {
                         this.clearHighlighted();
                         this.targetId = pick.id;
-                        this.queryCluster(this.targetId);
+                        this.queryCluster(this.targetId, movement.position);
                         this.setHighlighted(this.targetId, true);
                     }
                 };
@@ -168,17 +172,25 @@ module rpComponents.clusterService {
          */
         public getClusters(): any {
 
-            // debug
+            // args
+            var args: string =
+                '?zoom='+this.zoomLevelService.nextIndex +
+                '&xmin='+ this.zoomLevelService.getViewExtent(100).west +
+                '&xmax='+ this.zoomLevelService.getViewExtent(100).east +
+                '&ymin='+ this.zoomLevelService.getViewExtent(100).south +
+                '&ymax='+ this.zoomLevelService.getViewExtent(100).north;
+
+            console.log("summary query: "+this.serviceUrl + args);
+
+
             return this.$http({
                 method: 'GET',
-                url: this.serviceUrl +"/"+ this.zoomLevelService.nextIndex + '.json',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                data: {
-                    heightIndex: this.zoomLevelService.nextIndex,
-                    extent: this.zoomLevelService.getViewExtent(100)
-                }
+
+                // real service
+                //url: this.serviceUrl + 'summary' + args
+
+                // mock
+                url: this.serviceUrl +'mock-summary-'+ this.zoomLevelService.nextIndex + '.json'
             });
         }
 
@@ -188,7 +200,7 @@ module rpComponents.clusterService {
          *
          * @param cluster
          */
-        public queryCluster(cluster: any): void {
+        public queryCluster(cluster: any, position: any): void {
 
             //  spinner for summary chart load
             if(this.summarySpinner){
@@ -204,17 +216,25 @@ module rpComponents.clusterService {
                 this.summarySpinner();
             }
 
-            // DEBUG
-            // TODO update once establish cluster summary service
+            let carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.pickEllipsoid(position));
+            var args: string =
+                '?zoom='+this.zoomLevelService.nextIndex +
+                '&x='+ Cesium.Math.toDegrees(carto.longitude) +
+                '&y='+ Cesium.Math.toDegrees(carto.latitude);
+
+            var query: string = this.serviceUrl + 'query' + args;
+
+            console.log("query");
+            console.log(query);
+
             this.$http({
+
                 method: 'GET',
-                url: this.serviceUrl + '/cluster.json',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                data: {
-                    targetCluster: cluster
-                }
+                url: this.serviceUrl + '/cluster.json'
+
+                // real service
+                //url: query
+
             }).then((response: any) => {
 
                 if(response.hasOwnProperty('data')){
@@ -237,13 +257,14 @@ module rpComponents.clusterService {
 
             this.getClusters().then((response: any) => {
 
-                if(response.data){
+                if(response.data && response.data.features){
 
-                    var clusters: [any] = response.data;
+                    var clusters: [any] = response.data.features;
 
-                    // use d3 to build a scale for our extrude heights; we'll build a diff scale
+                    // use d3 to build a scale for our extrude heights; we need to build a diff scale
                     // for each zoom level, as we can't guarantee they'll start at the top and work down
-                    this.clusterRangeMeta.maxCount = d3.max(clusters, function(d: any) { return d.count; });
+                    // (if we add persistence)
+                    this.clusterRangeMeta.maxCount = d3.max(clusters, function(d: any) { return d.properties.count; });
                     this.clusterRangeMeta.scale = d3.scale.linear()
                         .domain([0, this.clusterRangeMeta.maxCount])
                         .range([0, this.clusterRangeMeta.maxExtrudeHeight]);
@@ -251,9 +272,9 @@ module rpComponents.clusterService {
                     for(var i = 0; i < clusters.length; i++){
 
                         // tag id with type for pick handling
-                        clusters[i]['featureType'] = 'rockPropsCluster';
+                        clusters[i].properties['featureType'] = 'rockPropsCluster';
 
-                        var clusterProps: any = this.computeClusterAttributes(clusters[i].count);
+                        var clusterProps: any = this.computeClusterAttributes(clusters[i].properties.count);
                         clusterInstances.push(this.buildClusterInstance(clusters[i], clusterProps));
                         labelCollection.add(this.buildLabel(clusters[i], clusterProps));
                     }
@@ -286,7 +307,10 @@ module rpComponents.clusterService {
 
             return new Cesium.GeometryInstance({
                 geometry : new Cesium.CircleGeometry({
-                    center : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat),
+                    center : Cesium.Cartesian3.fromDegrees(
+                        cluster.geometry.coordinates[0],
+                        cluster.geometry.coordinates[1]
+                    ),
                     radius : clusterProps.radius,
                     vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
                     extrudedHeight: clusterProps.extrudeHeight
@@ -301,8 +325,12 @@ module rpComponents.clusterService {
         buildLabel(cluster: any, clusterProps: any): any {
 
             return {
-                position : Cesium.Cartesian3.fromDegrees(cluster.lon, cluster.lat, 100 + clusterProps.extrudeHeight),
-                text: cluster.count.toString(),
+                position : Cesium.Cartesian3.fromDegrees(
+                    cluster.geometry.coordinates[0],
+                    cluster.geometry.coordinates[1],
+                    100 + clusterProps.extrudeHeight
+                ),
+                text: cluster.properties.count.toString(),
                 fillColor: Cesium.Color.BLACK,
                 outlineColor: Cesium.Color.RED,
                 // TODO review labelling
@@ -315,8 +343,9 @@ module rpComponents.clusterService {
         computeClusterAttributes(count: number): any {
 
             var attrs: any = {
-                radius: 100000 * (this.zoomLevelService.nextIndex / 10),
-                extrudeHeight: this.clusterRangeMeta.scale(count) * (this.zoomLevelService.nextIndex / 10)
+                // tweak these to scale cluster size/extrude on zoom
+                radius: 100000 / (this.zoomLevelService.nextIndex / 5),
+                extrudeHeight: this.clusterRangeMeta.scale(count) / (this.zoomLevelService.nextIndex / 3)
             };
             if(count < 100){
                 attrs.color = Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5);

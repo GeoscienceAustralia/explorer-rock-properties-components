@@ -28,8 +28,29 @@ module rpComponents.zoom {
     export class ZoomLevelService implements IZoomLevelService {
 
         viewer: any;
+
         // Arbitrary height indexes: < 5000 is 0, > 5000 && < 10000 is 1 etc.
-        zoomLevels: any = [5000, 10000, 20000, 40000, 750000, 1500000, 2500000, 3500000, 5500000, 6500000, 8000000];
+        zoomLevels: any = [
+            1000,
+            2000,
+            5000,
+            20000,
+            50000,
+            100000,
+            500000,
+            1000000,
+            3000000,
+            5000000,
+            7500000,
+
+
+            // these's tile may be a broad to be meaningful
+            8400000,
+            8500000,
+            9000000,
+            9500000,
+            10000000
+        ];
         nextIndex: number;
         previousIndex: number;
         defaultExtent: any = {
@@ -37,7 +58,7 @@ module rpComponents.zoom {
             "south": -45,
             "east": 158,
             "north": -8
-        }
+        };
 
         static $inject = [
             "$rootScope"
@@ -69,7 +90,7 @@ module rpComponents.zoom {
         public getIndex(height: number){
             for(var i = 0; i < this.zoomLevels.length; i++){
                 if(height < this.zoomLevels[i]){
-                    return i;
+                    return this.zoomLevels.length - i;
                 }
             }
             return this.zoomLevels.length - 1;
