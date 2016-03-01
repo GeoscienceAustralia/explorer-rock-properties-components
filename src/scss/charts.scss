@@ -25,10 +25,15 @@
     font-weight: bold;
 }
 
-#cluster-summary-chart-loading {
+#cluster-summary-chart-loading, #cluster-result-list-loading {
     position: absolute;
     left: 50%;
     margin-left: -50px;
     top: 50%;
     margin-top: -50px;
+}
+
+.rocks-result-list-feature {
+  padding: 10px 0px 0px 0px;
+  border-bottom: 1px dotted #444;
 }

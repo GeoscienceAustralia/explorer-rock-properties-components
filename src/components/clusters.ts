@@ -25,22 +25,17 @@ module rpComponents.clusterService {
         serviceUrl: string;
         clustersCollection: any;
 
-        init(): void;
         toggleClusters(): boolean;
         getClusters(heightIndex: number, extent: any): any;
         reCluster(): void;
         buildClusterInstance(cluster: any, props: any): any;
         buildLabel(cluster: any, props: any): any;
         drawClusters(sphereInstances: any, labelCollection: any): void;
-        setHighlighted(id: any, highlight: boolean): void;
-        clearHighlighted(): void;
     }
 
     export class ClusterService implements IClusterService {
 
         viewer: any;
-        pickHandler: any;
-        pickHandlerAction: any;
         serviceUrl: string;
         clusterPrimitive: any;
         clustersCollection: any;
@@ -48,16 +43,14 @@ module rpComponents.clusterService {
             maxExtrudeHeight: 500000
         };
 
-        targetId: any;
-        summarySpinner: any;
-
         static $inject = [
             "$http",
             "$rootScope",
             "zoomLevelService",
             "clusterChartService",
             "loadingSpinnerService",
-            "rocksConfigService"
+            "rocksConfigService",
+            "clusterInspectorService"
         ];
 
         constructor(
@@ -66,69 +59,18 @@ module rpComponents.clusterService {
             public zoomLevelService: rpComponents.zoom.IZoomLevelService,
             public clusterChartService: rpComponents.chartService.IClusterChartService,
             public loadingSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
-            public rocksConfigService: rpComponents.config.IRocksConfigService
+            public rocksConfigService: rpComponents.config.IRocksConfigService,
+            public clusterInspectorService: rpComponents.clusterInspector.IClusterInspectorService
+
         ) {
             this.$rootScope.$on('rocks.config.ready', () => {
-                this.init();
+                this.viewer = this.rocksConfigService.viewer;
+                this.serviceUrl = this.rocksConfigService.config.rocksServiceUrl;
             });
-        }
-
-        /**
-         *
-         * @param viewer
-         * @param summaryService
-         * @param usePicking
-         */
-        init(): void {
-
-            this.viewer = this.rocksConfigService.viewer;
-            this.zoomLevelService.viewer = this.rocksConfigService.viewer;
-
-            // real service
-            //this.serviceUrl = this.rocksConfigService.config.rocksServiceUrl;
-
-            // mock
-            this.serviceUrl = this.rocksConfigService.config.mockRocksServiceUrl;
 
             this.$rootScope.$on('rocks.clusters.update', () => {
                 this.reCluster();
             });
-
-            // setup our pick handler
-            if(this.rocksConfigService.config.useClusterPicking){
-
-                this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
-                this.pickHandlerAction = (movement: any) => {
-
-                    var pick = this.viewer.scene.pick(movement.position);
-
-                    if (Cesium.defined(pick) && Cesium.defined(pick.id) && pick.id.hasOwnProperty('properties') && pick.id.properties.featureType == 'rockPropsCluster') {
-                        this.clearHighlighted();
-                        this.targetId = pick.id;
-                        this.queryCluster(this.targetId, movement.position);
-                        this.setHighlighted(this.targetId, true);
-                    }
-                };
-            }
-        }
-
-        setHighlighted(id: any, highlight: boolean){
-
-            var attributes = this.clusterPrimitive.getGeometryInstanceAttributes(id);
-
-            if(attributes && highlight){
-                attributes.prevColor = attributes.color;
-                attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#ff00ff').withAlpha(1));
-            }
-        }
-
-        clearHighlighted(){
-            if(this.targetId){
-                var attributes = this.clusterPrimitive.getGeometryInstanceAttributes(this.targetId);
-                if(attributes && attributes.hasOwnProperty('prevColor')) {
-                    attributes.color = attributes.prevColor;
-                }
-            }
         }
 
         toggleClusters(): boolean {
@@ -139,10 +81,10 @@ module rpComponents.clusterService {
                 this.zoomLevelService.setActive(this.clustersCollection.show);
 
                 if(this.clustersCollection.show){
-                    this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                    this.clusterInspectorService.setPickEnabled(true);
                 }
                 else {
-                    this.pickHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                    this.clusterInspectorService.setPickEnabled(false);
                 }
 
                 this.reCluster();
@@ -152,11 +94,9 @@ module rpComponents.clusterService {
             else {
                 this.clustersCollection = new Cesium.PrimitiveCollection();
                 this.viewer.scene.primitives.add(this.clustersCollection);
-
                 this.zoomLevelService.setActive(true);
                 this.reCluster();
-
-                this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                this.clusterInspectorService.setPickEnabled(true);
             }
 
             return this.clustersCollection.show;
@@ -164,8 +104,6 @@ module rpComponents.clusterService {
 
         /**
          *
-         * This will be extended to use extent + zoom/index and filters on cluster service
-         * TODO where will we get our extent - shouldn't depend on minimap
          * TODO filters
          *
          * @returns {IHttpPromise<T>}
@@ -192,56 +130,6 @@ module rpComponents.clusterService {
                 // mock
                 url: this.serviceUrl +'mock-summary-'+ this.zoomLevelService.nextIndex + '.json'
             });
-        }
-
-        /**
-         *
-         * Gets a summary of cluster data to pass to chartService.
-         *
-         * @param cluster
-         */
-        public queryCluster(cluster: any, position: any): void {
-
-            //  spinner for summary chart load
-            if(this.summarySpinner){
-                document.getElementById("cluster-summary-chart-loading").style.display = 'block';
-            }
-            else {
-                this.summarySpinner = this.loadingSpinnerService.addSpinner({
-                    width: 100,
-                    height: 100,
-                    container: "#cluster-summary-chart-loading",
-                    id: "chart-spinner"
-                });
-                this.summarySpinner();
-            }
-
-            let carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.pickEllipsoid(position));
-            var args: string =
-                '?zoom='+this.zoomLevelService.nextIndex +
-                '&x='+ Cesium.Math.toDegrees(carto.longitude) +
-                '&y='+ Cesium.Math.toDegrees(carto.latitude);
-
-            var query: string = this.serviceUrl + 'query' + args;
-
-            console.log("query");
-            console.log(query);
-
-            this.$http({
-
-                method: 'GET',
-                url: this.serviceUrl + '/cluster.json'
-
-                // real service
-                //url: query
-
-            }).then((response: any) => {
-
-                if(response.hasOwnProperty('data')){
-                    this.clusterChartService.buildChart(response.data);
-                }
-            });
-
         }
 
         /**
@@ -299,6 +187,9 @@ module rpComponents.clusterService {
                     closed : true
                 })
             });
+
+            this.clusterInspectorService.setClusterPrimitive((this.clusterPrimitive));
+
             this.clustersCollection.add(this.clusterPrimitive);
             this.clustersCollection.add(labelCollection);
         }
@@ -377,13 +268,15 @@ module rpComponents.clusterService {
             "clusterChartService",
             "loadingSpinnerService",
             "rocksConfigService",
+            "clusterInspectorService",
         (
             $http: ng.IHttpService,
             $rootScope: ng.IRootScopeService,
             zoomLevelService: rpComponents.zoom.IZoomLevelService,
             clusterChartService: rpComponents.chartService.IClusterChartService,
             chartSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
-            rocksConfigService: rpComponents.config.IRocksConfigService
+            rocksConfigService: rpComponents.config.IRocksConfigService,
+            clusterInspectorService: rpComponents.clusterInspector.IClusterInspectorService
         ) =>
         new rpComponents.clusterService.ClusterService(
             $http,
@@ -391,7 +284,8 @@ module rpComponents.clusterService {
             zoomLevelService,
             clusterChartService,
             chartSpinnerService,
-            rocksConfigService
+            rocksConfigService,
+            clusterInspectorService
         )]);
 
 }

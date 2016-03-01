@@ -61,10 +61,18 @@ module rpComponents.zoom {
         };
 
         static $inject = [
-            "$rootScope"
+            "$rootScope",
+            "rocksConfigService"
         ];
 
-        constructor(public $rootScope:ng.IRootScopeService) {}
+        constructor(
+            public $rootScope:ng.IRootScopeService,
+            public rocksConfigService: rpComponents.config.IRocksConfigService
+        ) {
+            this.$rootScope.$on('rocks.config.ready', () => {
+                this.viewer = this.rocksConfigService.viewer;
+            });
+        }
         public moveEndHandler = () => {
 
             this.nextIndex = this.getIndex(Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
@@ -160,7 +168,10 @@ module rpComponents.zoom {
 
     angular
         .module('explorer.rockproperties.zoom', [])
-        .factory("zoomLevelService", ["$rootScope",
-            ($rootScope:ng.IRootScopeService) => new rpComponents.zoom.ZoomLevelService($rootScope)]);
+        .factory("zoomLevelService", ["$rootScope", "rocksConfigService",
+            (
+                $rootScope:ng.IRootScopeService,
+                rocksConfigService: rpComponents.config.IRocksConfigService
+            ) => new rpComponents.zoom.ZoomLevelService($rootScope, rocksConfigService)]);
 
 }

@@ -41,7 +41,6 @@ module rpComponents.chartService {
             });
         }
 
-
         public buildChart(dataset: any): any {
 
             document.getElementById("cluster-summary-chart-d3").innerHTML = "";
@@ -51,12 +50,22 @@ module rpComponents.chartService {
                 targetChartId: "clusterSummaryChart"
             });
 
+            // push data into array for d3 charting
+            var properties: any = [];
+            angular.forEach(dataset.properties, (property: any, key: any) => {
+                var propertyData: any = [];
+                angular.forEach(property, (attribute: any, attKey: any) => {
+                    propertyData.push({ attributeName: attKey, count: attribute });
+                });
+                properties.push({ propertyName: key, data: propertyData });
+            });
+
             /*---------------------------------------- D3 -----------------------------------------*/
 
             // LAYOUT
             var minWidth: number = 1250;
             var minHeight: number = 255;
-            var numberOfCharts = (dataset.length < 7) ? dataset.length : 4; // use two rows if we get too many properties
+            var numberOfCharts = (properties.length < 7) ? properties.length : 4; // use two rows if we get too many properties
             var width: any;
             var height: any;
             var padding: any;
@@ -80,7 +89,7 @@ module rpComponents.chartService {
 
             // DATA
             // build a chart for each property
-            dataset.forEach((property: any) => {
+            properties.forEach((property: any) => {
 
                 var color: any = d3.scale.category20();
 

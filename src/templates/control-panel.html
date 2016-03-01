@@ -14,7 +14,14 @@
 	</div>
 	<div class="rocks-accordion-content" ng-show="controlPanelVM.targetPanel == 'clusterFeatures'">
 
-		<rocks-cluster-filters></rocks-cluster-filters>
+		<uib-tabset active="activeJustified" justified="true">
+			<uib-tab index="0" heading="Inspect" style="padding: 0px 0px 20px 0px;">
+				<rocks-cluster-inspector-panel></rocks-cluster-inspector-panel>
+			</uib-tab>
+			<uib-tab index="1" heading="Filter" style="padding: 0px 0px 20px 0px;">
+				<rocks-cluster-filters></rocks-cluster-filters>
+			</uib-tab>
+		</uib-tabset>
 
 	</div>
 

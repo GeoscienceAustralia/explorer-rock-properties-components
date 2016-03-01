@@ -1,0 +1,66 @@
+
+<div ng-hide="clusterInspectorVM.rocksPanelService.clustersEnabled">
+	Enable Cluster Features to use the inspector tool.
+</div>
+
+<div ng-show="clusterInspectorVM.rocksPanelService.clustersEnabled">
+
+	<p>Click on a cluster to see:</p>
+
+	<label class="radio-inline">
+		<input
+			type="radio"
+			ng-model="clusterInspectorVM.clusterInspectorService.inspectMode"
+			value="CHART"> Summary charts
+	</label>
+	<label class="radio-inline">
+		<input
+			type="radio"
+			ng-model="clusterInspectorVM.clusterInspectorService.inspectMode"
+			value="LIST"> Results list
+	</label>
+
+	<div id="cluster-result-list-loading" style="padding-top: 10px; text-align: center;"></div>
+
+
+	<div ng-show="clusterInspectorVM.clusterInspectorService.listReady">
+
+		<div class="alert alert-success" style="margin-top: 30px;">
+			Features loaded:
+			{{
+				clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures +
+				clusterInspectorVM.clusterInspectorService.listIndex
+			}}
+		</div>
+
+		<div ng-repeat="feature in clusterInspectorVM.clusterInspectorService.listFeatures.features" class="rocks-result-list-feature">
+
+			<table class="table table-hover table-striped">
+
+				<h5>ID: {{feature.id}}</h5>
+				<tbody>
+					<tr>
+						<td><strong>GEOM</strong></td>
+						<td>{{feature.geometry.coordinates[0]}}, {{feature.geometry.coordinates[1]}}</td>
+					</tr>
+					<tr ng-repeat="(key, value) in feature.properties">
+						<td><strong>{{key}}</strong></td>
+						<td>{{value}}</td>
+					</tr>
+				</tbody>
+
+			</table>
+		</div>
+
+		<a
+			ng-show="clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures <= clusterInspectorVM.clusterInspectorService.maxListStep"
+			class="btn btn-default"
+			style="margin-top: 40px; width: 100%;"
+			ng-click="clusterInspectorVM.clusterInspectorService.loadNextListStep()"
+			href="javascript:;">
+			Load more records
+		</a>
+
+	</div>
+
+</div>
