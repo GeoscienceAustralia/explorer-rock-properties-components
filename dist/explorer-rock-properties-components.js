@@ -404,6 +404,124 @@ var rpComponents;
 /// <reference path="../../typings/tsd.d.ts" />
 var rpComponents;
 (function (rpComponents) {
+    var filters;
+    (function (filters) {
+        'use strict';
+        var RocksClusterFilterCtrl = (function () {
+            function RocksClusterFilterCtrl($scope, clusterService, rocksPanelService, rocksFiltersService) {
+                this.$scope = $scope;
+                this.clusterService = clusterService;
+                this.rocksPanelService = rocksPanelService;
+                this.rocksFiltersService = rocksFiltersService;
+            }
+            RocksClusterFilterCtrl.$inject = ["$scope", "clusterService", "rocksPanelService", "rocksFiltersService"];
+            return RocksClusterFilterCtrl;
+        })();
+        filters.RocksClusterFilterCtrl = RocksClusterFilterCtrl;
+        var ClusterFilterState = (function () {
+            function ClusterFilterState() {
+                this.filterQuery = '';
+            }
+            return ClusterFilterState;
+        })();
+        filters.ClusterFilterState = ClusterFilterState;
+        var RocksFiltersService = (function () {
+            function RocksFiltersService($http, $rootScope, rocksConfigService, clusterService, clusterFilterState) {
+                var _this = this;
+                this.$http = $http;
+                this.$rootScope = $rootScope;
+                this.rocksConfigService = rocksConfigService;
+                this.clusterService = clusterService;
+                this.clusterFilterState = clusterFilterState;
+                this.clusterFilters = {};
+                this.$inject = [
+                    "$http",
+                    "$rootScope",
+                    "rocksConfigService",
+                    "clusterService",
+                    "clusterFilterState"
+                ];
+                // load filter data
+                this.$rootScope.$on("rocks.config.ready", function () {
+                    $http.get(_this.rocksConfigService.config.filterNamesServiceUrl).then(function (response) {
+                        _this.filters = response.data;
+                        for (var i = 0; i < _this.filters.length; i++) {
+                            if (_this.filters[i].filterType == "PROPERTY") {
+                                // set up properties array with flag for export
+                                var propertyOptions = angular.copy(_this.filters[i].filterOptions);
+                                for (var j = 0; j < propertyOptions.length; j++) {
+                                    propertyOptions[j] = {
+                                        name: propertyOptions[j],
+                                        isSelected: false
+                                    };
+                                }
+                                var properties = angular.copy(_this.filters[i]);
+                                properties.filterOptions = propertyOptions;
+                                _this.exportProperties = properties;
+                            }
+                        }
+                    }), function (response) {
+                        console.log("Failed to get rock props filters");
+                        console.log(response);
+                    };
+                });
+            }
+            RocksFiltersService.prototype.setAllExportSelected = function (selected) {
+                for (var i = 0; i < this.exportProperties.filterOptions.length; i++) {
+                    this.exportProperties.filterOptions[i].isSelected = selected;
+                }
+            };
+            RocksFiltersService.prototype.applyFilters = function () {
+                this.clusterFilterState.filterQuery = this.buildFilterQuery();
+                this.clusterService.reCluster();
+                ga('send', 'event', 'explorer-rock-properties', 'click', 'cluster filters applied');
+            };
+            RocksFiltersService.prototype.buildFilterQuery = function () {
+                var query = '';
+                for (var i = 0; i < this.filters.length; i++) {
+                    if (this.filters[i].hasOwnProperty('ClusterOption') && this.filters[i].ClusterOption != false) {
+                        query = query + '&filter=' + encodeURIComponent(this.filters[i].filterType + '=' + this.filters[i].ClusterOption);
+                    }
+                }
+                return query;
+            };
+            RocksFiltersService.prototype.clearFilters = function () {
+                for (var i = 0; i < this.filters.length; i++) {
+                    if (this.filters[i].hasOwnProperty('ClusterOption')) {
+                        this.filters[i].ClusterOption = false;
+                    }
+                }
+                this.clusterFilterState.filterQuery = "";
+                this.clusterService.reCluster();
+            };
+            return RocksFiltersService;
+        })();
+        filters.RocksFiltersService = RocksFiltersService;
+        angular
+            .module('explorer.rockproperties.clusterfilters', [])
+            .controller("rocksClusterFilterCtrl", RocksClusterFilterCtrl)
+            .directive("rocksClusterFilters", function () {
+            return {
+                templateUrl: 'rockprops/cluster-filters.html',
+                controller: RocksClusterFilterCtrl,
+                controllerAs: 'rocksClusterFilterVM'
+            };
+        })
+            .factory("rocksFiltersService", [
+            "$http",
+            "$rootScope",
+            "rocksConfigService",
+            "clusterService",
+            "clusterFilterState",
+            function ($http, $rootScope, rocksConfigService, clusterService, clusterFilterState) {
+                return new rpComponents.filters.RocksFiltersService($http, $rootScope, rocksConfigService, clusterService, clusterFilterState);
+            }])
+            .factory("clusterFilterState", [function () { return new rpComponents.filters.ClusterFilterState(); }]);
+    })(filters = rpComponents.filters || (rpComponents.filters = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/tsd.d.ts" />
+var rpComponents;
+(function (rpComponents) {
     var clusterInspector;
     (function (clusterInspector) {
         'use strict';
@@ -418,7 +536,7 @@ var rpComponents;
         })();
         clusterInspector.ClusterInspectorCtrl = ClusterInspectorCtrl;
         var ClusterInspectorService = (function () {
-            function ClusterInspectorService($http, $rootScope, $timeout, zoomLevelService, loadingSpinnerService, rocksConfigService, clusterChartService) {
+            function ClusterInspectorService($http, $rootScope, $timeout, zoomLevelService, loadingSpinnerService, rocksConfigService, clusterChartService, clusterFilterState) {
                 var _this = this;
                 this.$http = $http;
                 this.$rootScope = $rootScope;
@@ -427,6 +545,7 @@ var rpComponents;
                 this.loadingSpinnerService = loadingSpinnerService;
                 this.rocksConfigService = rocksConfigService;
                 this.clusterChartService = clusterChartService;
+                this.clusterFilterState = clusterFilterState;
                 this.inspectMode = "CHART";
                 this.listReady = false;
                 // TODO decide reasonable step size when plugged into real service
@@ -491,6 +610,7 @@ var rpComponents;
                 var args = '?zoom=' + this.zoomLevelService.nextIndex +
                     '&x=' + Cesium.Math.toDegrees(this.targetPos.longitude) +
                     '&y=' + Cesium.Math.toDegrees(this.targetPos.latitude);
+                this.clusterFilterState.filterQuery;
                 var query = this.serviceUrl + 'query' + args;
                 console.log("query");
                 console.log(query);
@@ -531,6 +651,7 @@ var rpComponents;
                     '&startIndex=' + this.listIndex +
                     '&x=' + Cesium.Math.toDegrees(this.targetPos.longitude) +
                     '&y=' + Cesium.Math.toDegrees(this.targetPos.latitude);
+                this.clusterFilterState.filterQuery;
                 var query = this.serviceUrl + 'features' + args;
                 console.log("features query");
                 console.log(query);
@@ -588,7 +709,8 @@ var rpComponents;
                 "zoomLevelService",
                 "loadingSpinnerService",
                 "rocksConfigService",
-                "clusterChartService"
+                "clusterChartService",
+                "clusterFilterState"
             ];
             return ClusterInspectorService;
         })();
@@ -611,8 +733,9 @@ var rpComponents;
             "loadingSpinnerService",
             "rocksConfigService",
             "clusterChartService",
-            function ($http, $rootScope, $timeout, zoomLevelService, chartSpinnerService, rocksConfigService, clusterChartService) {
-                return new rpComponents.clusterInspector.ClusterInspectorService($http, $rootScope, $timeout, zoomLevelService, chartSpinnerService, rocksConfigService, clusterChartService);
+            "clusterFilterState",
+            function ($http, $rootScope, $timeout, zoomLevelService, chartSpinnerService, rocksConfigService, clusterChartService, clusterFilterState) {
+                return new rpComponents.clusterInspector.ClusterInspectorService($http, $rootScope, $timeout, zoomLevelService, chartSpinnerService, rocksConfigService, clusterChartService, clusterFilterState);
             }]);
     })(clusterInspector = rpComponents.clusterInspector || (rpComponents.clusterInspector = {}));
 })(rpComponents || (rpComponents = {}));
@@ -620,21 +743,10 @@ var rpComponents;
 var rpComponents;
 (function (rpComponents) {
     var clusterService;
-    (function (clusterService_1) {
+    (function (clusterService) {
         'use strict';
-        var RocksClusterFilterCtrl = (function () {
-            function RocksClusterFilterCtrl($scope, clusterService, rocksPanelService, rocksFiltersService) {
-                this.$scope = $scope;
-                this.clusterService = clusterService;
-                this.rocksPanelService = rocksPanelService;
-                this.rocksFiltersService = rocksFiltersService;
-            }
-            RocksClusterFilterCtrl.$inject = ["$scope", "clusterService", "rocksPanelService", "rocksFiltersService"];
-            return RocksClusterFilterCtrl;
-        })();
-        clusterService_1.RocksClusterFilterCtrl = RocksClusterFilterCtrl;
         var ClusterService = (function () {
-            function ClusterService($http, $rootScope, zoomLevelService, clusterChartService, loadingSpinnerService, rocksConfigService, clusterInspectorService) {
+            function ClusterService($http, $rootScope, zoomLevelService, clusterChartService, loadingSpinnerService, rocksConfigService, clusterInspectorService, clusterFilterState) {
                 var _this = this;
                 this.$http = $http;
                 this.$rootScope = $rootScope;
@@ -643,9 +755,11 @@ var rpComponents;
                 this.loadingSpinnerService = loadingSpinnerService;
                 this.rocksConfigService = rocksConfigService;
                 this.clusterInspectorService = clusterInspectorService;
+                this.clusterFilterState = clusterFilterState;
                 this.clusterRangeMeta = {
                     maxExtrudeHeight: 500000
                 };
+                this.clusterFilter = '';
                 /**
                  *
                  * We get a performance benefit when we use fewer
@@ -721,7 +835,8 @@ var rpComponents;
                     '&xmin=' + this.zoomLevelService.getViewExtent(100).west +
                     '&xmax=' + this.zoomLevelService.getViewExtent(100).east +
                     '&ymin=' + this.zoomLevelService.getViewExtent(100).south +
-                    '&ymax=' + this.zoomLevelService.getViewExtent(100).north;
+                    '&ymax=' + this.zoomLevelService.getViewExtent(100).north +
+                    this.clusterFilterState.filterQuery;
                 console.log("summary query: " + this.serviceUrl + args);
                 return this.$http({
                     method: 'GET',
@@ -760,20 +875,22 @@ var rpComponents;
             };
             ClusterService.prototype.buildLabel = function (cluster, clusterProps) {
                 return {
-                    position: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1], 100 + clusterProps.extrudeHeight),
+                    position: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1], 10000 + clusterProps.extrudeHeight),
                     text: cluster.properties.count.toString(),
                     fillColor: Cesium.Color.BLACK,
                     outlineColor: Cesium.Color.RED,
                     // TODO review labelling
-                    font: (40 - this.zoomLevelService.nextIndex) + 'px arial, sans-serif',
+                    font: (45 - (this.zoomLevelService.nextIndex * 3)) + 'px arial, sans-serif',
                     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                     id: cluster
                 };
             };
             ClusterService.prototype.computeClusterAttributes = function (count) {
+                var radius = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 100;
+                console.log("RADIUS " + radius);
                 var attrs = {
                     // tweak these to scale cluster size/extrude on zoom
-                    radius: 100000 / (this.zoomLevelService.nextIndex / 5),
+                    radius: radius,
                     extrudeHeight: this.clusterRangeMeta.scale(count) / (this.zoomLevelService.nextIndex / 3)
                 };
                 if (count < 100) {
@@ -794,21 +911,14 @@ var rpComponents;
                 "clusterChartService",
                 "loadingSpinnerService",
                 "rocksConfigService",
-                "clusterInspectorService"
+                "clusterInspectorService",
+                "clusterFilterState"
             ];
             return ClusterService;
         })();
-        clusterService_1.ClusterService = ClusterService;
+        clusterService.ClusterService = ClusterService;
         angular
             .module('explorer.rockproperties.clusters', [])
-            .controller("rocksClusterFilterCtrl", RocksClusterFilterCtrl)
-            .directive("rocksClusterFilters", function () {
-            return {
-                templateUrl: 'rockprops/cluster-filters.html',
-                controller: RocksClusterFilterCtrl,
-                controllerAs: 'rocksClusterFilterVM'
-            };
-        })
             .factory("clusterService", [
             "$http",
             "$rootScope",
@@ -817,8 +927,9 @@ var rpComponents;
             "loadingSpinnerService",
             "rocksConfigService",
             "clusterInspectorService",
-            function ($http, $rootScope, zoomLevelService, clusterChartService, chartSpinnerService, rocksConfigService, clusterInspectorService) {
-                return new rpComponents.clusterService.ClusterService($http, $rootScope, zoomLevelService, clusterChartService, chartSpinnerService, rocksConfigService, clusterInspectorService);
+            "clusterFilterState",
+            function ($http, $rootScope, zoomLevelService, clusterChartService, chartSpinnerService, rocksConfigService, clusterInspectorService, clusterFilterState) {
+                return new rpComponents.clusterService.ClusterService($http, $rootScope, zoomLevelService, clusterChartService, chartSpinnerService, rocksConfigService, clusterInspectorService, clusterFilterState);
             }]);
     })(clusterService = rpComponents.clusterService || (rpComponents.clusterService = {}));
 })(rpComponents || (rpComponents = {}));
@@ -929,64 +1040,6 @@ var rpComponents;
             };
         });
     })(controlPanel = rpComponents.controlPanel || (rpComponents.controlPanel = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/tsd.d.ts" />
-var rpComponents;
-(function (rpComponents) {
-    var filters;
-    (function (filters) {
-        'use strict';
-        var RocksFiltersService = (function () {
-            function RocksFiltersService($http, $rootScope, rocksConfigService) {
-                var _this = this;
-                this.$http = $http;
-                this.$rootScope = $rootScope;
-                this.rocksConfigService = rocksConfigService;
-                this.$inject = [
-                    "$http",
-                    "$rootScope",
-                    "rocksConfigService"
-                ];
-                // load filter data
-                this.$rootScope.$on("rocks.config.ready", function () {
-                    $http.get(_this.rocksConfigService.config.filterNamesServiceUrl).then(function (response) {
-                        _this.filters = response.data;
-                        for (var i = 0; i < _this.filters.length; i++) {
-                            if (_this.filters[i].filterType == "PROPERTY") {
-                                // set up properties array with flag for export
-                                var propertyOptions = angular.copy(_this.filters[i].filterOptions);
-                                for (var j = 0; j < propertyOptions.length; j++) {
-                                    propertyOptions[j] = {
-                                        name: propertyOptions[j],
-                                        isSelected: false
-                                    };
-                                }
-                                var properties = angular.copy(_this.filters[i]);
-                                properties.filterOptions = propertyOptions;
-                                _this.exportProperties = properties;
-                            }
-                        }
-                    }), function (response) {
-                        console.log("Failed to get rock props filters");
-                        console.log(response);
-                    };
-                });
-            }
-            RocksFiltersService.prototype.setAllExportSelected = function (selected) {
-                for (var i = 0; i < this.exportProperties.filterOptions.length; i++) {
-                    this.exportProperties.filterOptions[i].isSelected = selected;
-                }
-            };
-            return RocksFiltersService;
-        })();
-        filters.RocksFiltersService = RocksFiltersService;
-        angular
-            .module('explorer.rockproperties.filters', [])
-            .factory("rocksFiltersService", ["$http", "$rootScope", "rocksConfigService",
-            function ($http, $rootScope, rocksConfigService) {
-                return new rpComponents.filters.RocksFiltersService($http, $rootScope, rocksConfigService);
-            }]);
-    })(filters = rpComponents.filters || (rpComponents.filters = {}));
 })(rpComponents || (rpComponents = {}));
 /// <reference path="../../typings/tsd.d.ts" />
 /**
@@ -1169,10 +1222,7 @@ var rpComponents;
                     var zip = new JSZip();
                     // give zip file to decent browsers
                     if (JSZip.support.blob) {
-                        //showLoading = true;
                         var promises = [];
-                        console.log("this.wfsLayerNames");
-                        console.log(this.wfsLayerNames);
                         // create a Get query for each layer
                         for (var i = 0; i < this.wfsLayerNames.length; i++) {
                             var query = this.buildQuery(targetFeatures, extent, format, [this.wfsLayerNames[i]]);
@@ -1243,7 +1293,7 @@ var rpComponents;
                 else {
                     this.propertyQuery = this.getPropertyQuery(properties);
                 }
-                //ga('send', 'event', 'explorer-rock-properties', 'click', 'data export: '+ format);
+                ga('send', 'event', 'explorer-rock-properties', 'click', 'clipship data export: ' + format);
                 query = this.baseUrl + typeNamesQuery + exportFormat + bboxQuery + filterQuery + this.propertyQuery;
                 return query;
             };
@@ -1438,7 +1488,6 @@ var rpComponents;
                 this.$rootScope.$on('rocks.config.ready', function () {
                     // load feature classes
                     assetsService.getReferenceFeatureClasses().then(function (features) {
-                        console.log(features);
                         _this.features = features;
                     });
                     // init rocks feature
@@ -1700,25 +1749,24 @@ var rpComponents;
                 var _this = this;
                 this.$rootScope = $rootScope;
                 this.rocksConfigService = rocksConfigService;
-                // Arbitrary height indexes: < 5000 is 0, > 5000 && < 10000 is 1 etc.
                 this.zoomLevels = [
-                    1000,
+                    200,
+                    500,
                     2000,
                     5000,
-                    20000,
+                    10000,
                     50000,
                     100000,
-                    500000,
                     1000000,
-                    3000000,
-                    5000000,
-                    7500000,
-                    // these's tile may be a broad to be meaningful
-                    8400000,
+                    1500000,
+                    2000000,
+                    4000000,
+                    6500000,
+                    // these's tiles are pretty broad
                     8500000,
-                    9000000,
-                    9500000,
-                    10000000
+                    10000000,
+                    15000000,
+                    100000000
                 ];
                 this.defaultExtent = {
                     "west": 109,
@@ -1817,8 +1865,8 @@ var rpComponents;
 })(rpComponents || (rpComponents = {}));
 angular.module("explorer.rockproperties.templates", []).run(["$templateCache", function ($templateCache) {
         $templateCache.put("rockprops/clip-ship.html", "\n<div ng-show=\"rocksClipShipVM.rocksClipShipService.step == \'startDraw\'\">\n	<h6 class=\"dis-inline\">\n		1.\n		<button ng-click=\"rocksClipShipVM.rocksClipShipService.startDraw()\" style=\"padding: 5px 10px;border-radius: 3px;border: none;\">\n			Click here\n		</button>\n		to select an area on the map <i class=\"fa fa-scissors\" style=\"font-size: 16px;\"></i></h6>\n</div>\n\n\n<div ng-show=\"rocksClipShipVM.rocksClipShipService.step == \'selectFeatures\'\">\n\n	<h6 class=\"dis-inline\">2. Select features to download:</h6>\n\n	<div>\n\n		<!-- if we have active property filters, use them instead -->\n		<p ng-show=\"hasAnyFilter\">\n			<i class=\"fa fa-info-circle\"></i> Current filters will be applied to the exported data.\n		</p>\n\n		<div ng-hide=\"hasAnyFilter\">\n\n			<div style=\"padding: 5px; margin-top: 10px; background: #f0f0f0; border-radius: 3px;\">\n				<label>\n					<input\n						type=\"checkbox\"\n						ng-model=\"masterCheck\"\n						ng-disabled=\"hasPropertyFilter\"\n						ng-change=\"rocksClipShipVM.rocksFiltersService.setAllExportSelected(masterCheck)\" />\n					{{ masterCheck ? \'Deselect\' : \'Select\' }} All\n				</label>\n			</div>\n\n			<label style=\"margin-left: 25px;\" class=\"checkbox\" ng-repeat=\"property in rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions\">\n				<input\n					type=\"checkbox\"\n					value=\"property.isSelected\"\n					ng-model=\"property.isSelected\"\n					ng-checked=\"masterCheck\"\n					ng-disabled=\"hasPropertyFilter\">\n				{{ property.name }}\n			</label>\n\n		</div>\n\n		<div style=\"margin: 20px 0px 20px 0px;\">\n			<label title=\"Export Format\">Export Format</label>\n			<select ng-change=\"rocksClipShipVM.rocksClipShipService.updateExportFormat(exportFormats.SelectedOption)\"\n					ng-model=\"exportFormats.SelectedOption\"\n					name=\"format\"\n					ng-options=\"option for option in rocksClipShipVM.rocksClipShipService.exportFormats\"\n					ng-class=\"form-control\"\n					class=\"filter-input\"\n					style=\"float: right; width: 160px;\">\n				<option value=\"\" class=\"\">--select--</option>\n			</select>\n		</div>\n\n		<a ng-click=\"rocksClipShipVM.rocksClipShipService.openGeoserver()\" style=\"font-size: 11px; margin-top: 20px; color: blue; text-decoration: underline;\">\n			More Options via GeoServer Dashboard\n		</a>\n\n		<div style=\"margin-top: 20px;\">\n			<button\n				type=\"button\"\n				class=\"btn btn-default\"\n				ng-click=\"rocksClipShipVM.rocksClipShipService.step = \'startDraw\'; rocksClipShipVM.rocksClipShipService.isDrawing = false\"\n				title=\"Cancel Download\"\n				style=\"width: 40%; float: left;\">Cancel</button>\n			<button\n				type=\"button\"\n				class=\"btn btn-default focusMe\"\n				ng-click=\"rocksClipShipVM.startClipShip()\"\n				style=\"width: 40%; float: right\"\n				title=\"Select one or more reference feature classes before continuing.\"\n				ng-disabled=\"(rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions | noClipSelected) || (!rocksClipShipVM.rocksClipShipService.targetFormat)\">Next</button>\n		</div>\n\n	</div>\n\n</div>\n\n<div ng-show=\"rocksClipShipVM.rocksClipShipService.step == \'download\'\">\n\n	<h6>3. Data Export:</h6>\n\n	<div ng-hide=\"rocksClipShipVM.rocksQueryBuilderExport.loading\">\n\n		<p ng-show=\"rocksClipShipVM.rocksClipShipService.targetFormat === \'application/json\'\" style=\"margin-top: 40px;\">\n			<i class=\"fa fa-info-circle\"></i> Once json has loaded, save page as a .json file.\n		</p>\n\n		<p class=\"warning-block\" style=\"margin-top: 20px;\">\n			<i class=\"fa fa-info-circle\"></i> Large data sets may take several minutes to export.\n		</p>\n\n		<a\n			class=\"btn btn-default\"\n			target=\"_blank\"\n			href=\"{{rocksClipShipVM.rocksQueryBuilderExport.exportUrl}}\"\n			ng-click=\"rocksClipShipVM.rocksClipShipService.step = \'startDraw\'; rocksClipShipVM.rocksClipShipService.isDrawing = false\"\n			style=\"width: 100%; margin-top: 30px;\"\n			role=\"button\">\n			<i class=\"fa fa-download\"></i> Download {{ rocksClipShipVM.rocksClipShipService.targetFormat }}\n		</a>\n\n		<a\n			class=\"btn btn-default\"\n			href=\"javascript:;\"\n			ng-click=\"rocksClipShipVM.rocksClipShipService.step = \'selectFeatures\'\"\n			style=\"width: 100%; margin-top: 10px;\"\n			role=\"button\">\n			<i class=\"fa fa-arrow-left\"></i> Back\n		</a>\n\n	</div>\n\n</div>\n\n<div id=\"rock-clip-ship-loading\" ng-show=\"rocksClipShipVM.rocksQueryBuilderExport.loading\">\n	<p>Preparing Data..</p>\n</div>");
-        $templateCache.put("rockprops/cluster-filters.html", "\n<!-- TODO plug into rock props filter service -->\n\n<div ng-hide=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\n	Enable Cluster Features to apply filters.\n</div>\n\n<div ng-show=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\n\n\n	<div ng-repeat=\"filter in rocksClusterFilterVM.rocksFiltersService.filters\" style=\"padding-top:7px;position:relative; overflow-x: hidden;overflow-y: auto;\">\n\n		<label style=\"font-size: 11px;\" title=\"{{filter.filterLabel}}\">{{filter.filterLabel}}</label>\n		<select\n				ng-change=\"filterChanged(filter.filterType, filter.SelectedOption)\"\n				ng-model=\"filter.SelectedOption\"\n				name=\"filter.filterType\"\n				ng-options=\"option as option for option in filter.filterOptions\"\n				ng-class=\'form-control\'\n				class=\'filter-input\'\n				style=\"float:left;width:100%;position:relative;\">\n			<option value=\"\" selected>--select--</option>\n		</select>\n\n	</div>\n\n	<div style=\"text-align: center;\">\n		<a class=\"btn btn-default\" style=\"margin: 10px;\" ng-click=\"applyFilters()\" href=\"javascript:;\">\n			<i class=\"fa fa-filter fa-lg\"></i>\n			Apply\n		</a>\n\n		<a class=\"btn btn-default\" style=\"margin: 10px;\" ng-click=\"clearFilters()\" href=\"javascript:;\">\n			<i class=\"fa fa-remove fa-lg\"></i>\n			Clear\n		</a>\n\n		<p ng-show=\"filterResultCount()\" style=\"text-align: left; margin: 10px; font-size: 14px;\">\n			<strong>Record Count: </strong>\n			14320\n		</p>\n	</div>\n\n</div>\n");
-        $templateCache.put("rockprops/cluster-inspector.html", "\n<div ng-hide=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\n	Enable Cluster Features to use the inspector tool.\n</div>\n\n<div ng-show=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\n\n	<p>Click on a cluster to see:</p>\n\n	<label class=\"radio-inline\">\n		<input\n			type=\"radio\"\n			ng-model=\"clusterInspectorVM.clusterInspectorService.inspectMode\"\n			value=\"CHART\"> Summary charts\n	</label>\n	<label class=\"radio-inline\">\n		<input\n			type=\"radio\"\n			ng-model=\"clusterInspectorVM.clusterInspectorService.inspectMode\"\n			value=\"LIST\"> Results list\n	</label>\n\n	<div id=\"cluster-result-list-loading\" style=\"padding-top: 10px; text-align: center;\"></div>\n\n\n	<div ng-show=\"clusterInspectorVM.clusterInspectorService.listReady\">\n\n		<div class=\"alert alert-success\" style=\"margin-top: 30px;\">\n			Features loaded:\n			{{\n				clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures +\n				clusterInspectorVM.clusterInspectorService.listIndex\n			}}\n		</div>\n\n		<div ng-repeat=\"feature in clusterInspectorVM.clusterInspectorService.listFeatures.features\" class=\"rocks-result-list-feature\">\n\n			<table class=\"table table-hover table-striped\">\n\n				<h5>ID: {{feature.id}}</h5>\n				<tbody>\n					<tr>\n						<td><strong>GEOM</strong></td>\n						<td>{{feature.geometry.coordinates[0]}}, {{feature.geometry.coordinates[1]}}</td>\n					</tr>\n					<tr ng-repeat=\"(key, value) in feature.properties\">\n						<td><strong>{{key}}</strong></td>\n						<td>{{value}}</td>\n					</tr>\n				</tbody>\n\n			</table>\n		</div>\n\n		<a\n			ng-show=\"clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures <= clusterInspectorVM.clusterInspectorService.maxListStep\"\n			class=\"btn btn-default\"\n			style=\"margin-top: 40px; width: 100%;\"\n			ng-click=\"clusterInspectorVM.clusterInspectorService.loadNextListStep()\"\n			href=\"javascript:;\">\n			Load more records\n		</a>\n\n	</div>\n\n</div>\n");
+        $templateCache.put("rockprops/cluster-filters.html", "\n<!-- TODO plug into rock props filter service -->\n\n<div ng-hide=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\n	Enable Cluster Features to apply filters.\n</div>\n\n<div ng-show=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\n\n\n	<div ng-repeat=\"filter in rocksClusterFilterVM.rocksFiltersService.filters\" style=\"padding-top:7px;position:relative; overflow-x: hidden;overflow-y: auto;\">\n\n		<label style=\"font-size: 11px;\" title=\"{{filter.filterLabel}}\">{{filter.filterLabel}}</label>\n		<select\n				ng-model=\"filter.ClusterOption\"\n				name=\"filter.filterType\"\n				ng-options=\"option as option for option in filter.filterOptions\"\n				ng-class=\'form-control\'\n				class=\'filter-input\'\n				style=\"float:left;width:100%;position:relative;\">\n			<option value=\"\" selected>--select--</option>\n		</select>\n\n	</div>\n\n	<div style=\"text-align: center;\">\n		<a class=\"btn btn-default\" style=\"margin: 10px;\" ng-click=\"rocksClusterFilterVM.rocksFiltersService.applyFilters()\" href=\"javascript:;\">\n			<i class=\"fa fa-filter fa-lg\"></i>\n			Apply\n		</a>\n\n		<a class=\"btn btn-default\" style=\"margin: 10px;\" ng-click=\"rocksClusterFilterVM.rocksFiltersService.clearFilters()\" href=\"javascript:;\">\n			<i class=\"fa fa-remove fa-lg\"></i>\n			Clear\n		</a>\n\n		<p ng-show=\"filterResultCount()\" style=\"text-align: left; margin: 10px; font-size: 14px;\">\n			<strong>Record Count: </strong>\n			14320\n		</p>\n	</div>\n\n</div>\n");
+        $templateCache.put("rockprops/cluster-inspector.html", "\n<div ng-hide=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\n	Enable Cluster Features to use the inspector tool.\n</div>\n\n<div ng-show=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\n\n	<p>Click on a cluster to see:</p>\n\n	<label class=\"radio-inline\">\n		<input\n			type=\"radio\"\n			ng-model=\"clusterInspectorVM.clusterInspectorService.inspectMode\"\n			value=\"CHART\"> Summary charts\n	</label>\n	<label class=\"radio-inline\">\n		<input\n			type=\"radio\"\n			ng-model=\"clusterInspectorVM.clusterInspectorService.inspectMode\"\n			value=\"LIST\"> Results list\n	</label>\n\n	<div id=\"cluster-result-list-loading\" style=\"padding-top: 10px; text-align: center;\"></div>\n\n\n	<div ng-show=\"clusterInspectorVM.clusterInspectorService.listReady\">\n\n		<div ng-if=\"clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures > 0\" class=\"alert alert-success\" style=\"margin-top: 30px;\">\n			Features loaded:\n			{{\n				clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures +\n				clusterInspectorVM.clusterInspectorService.listIndex\n			}}\n		</div>\n\n		<div ng-if=\"!(clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures > 0)\" class=\"alert alert-warning\" style=\"margin-top: 30px;\">\n			No more features to load at this location.\n		</div>\n\n		<div ng-repeat=\"feature in clusterInspectorVM.clusterInspectorService.listFeatures.features\" class=\"rocks-result-list-feature\">\n\n			<table class=\"table table-hover table-striped\">\n\n				<h5>ID: {{feature.id}}</h5>\n				<tbody>\n					<tr>\n						<td><strong>GEOM</strong></td>\n						<td>{{feature.geometry.coordinates[0]}}, {{feature.geometry.coordinates[1]}}</td>\n					</tr>\n					<tr ng-repeat=\"(key, value) in feature.properties\">\n						<td><strong>{{key}}</strong></td>\n						<td>{{value}}</td>\n					</tr>\n				</tbody>\n\n			</table>\n		</div>\n\n		<a\n			ng-show=\"clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures <= clusterInspectorVM.clusterInspectorService.maxListStep\"\n			class=\"btn btn-default\"\n			style=\"margin-top: 40px; width: 100%;\"\n			ng-click=\"clusterInspectorVM.clusterInspectorService.loadNextListStep()\"\n			href=\"javascript:;\">\n			Load more records\n		</a>\n\n	</div>\n\n</div>\n");
         $templateCache.put("rockprops/cluster-summary.html", "<div id=\"clusterSummaryChart\" ng-show=\"chartState.targetChartId == \'clusterSummaryChart\'\">\n\n	<div class=\"btn-group\" style=\"position: absolute;right: 10px;top: 10px;\">\n		<button type=\"button\" class=\"btn btn-default\" title=\"Close charts\" ng-click=\"clusterChartVM.clusterChartService.hideChart(); clusterChartVM.clusterService.clearHighlighted();\">\n			<i class=\"fa fa-times-circle\" role=\"presentation\" style=\"font-size:16px; color:black\"></i>\n		</button>\n	</div>\n\n	<div id=\"cluster-summary-chart-d3\"></div>\n	<div id=\"cluster-summary-chart-loading\"></div>\n\n</div>");
         $templateCache.put("rockprops/control-panel.html", "<div>\n\n	<div class=\"rocks-accordion\">\n		<div class=\"rocks-toggle-button\" title=\"Show/hide cluster features\">\n			<input\n				type=\"checkbox\"\n				ng-model=\"controlPanelVM.rocksPanelService.clustersEnabled\"\n				ng-change=\"controlPanelVM.rocksPanelService.toggleClusters()\" />\n		</div>\n		<button class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'clusterFeatures\')\">\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'clusterFeatures\' ? \'minus\' : \'plus\' }}\"></i>\n			Cluster Features\n		</button>\n	</div>\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'clusterFeatures\'\">\n\n		<uib-tabset active=\"activeJustified\" justified=\"true\">\n			<uib-tab index=\"0\" heading=\"Inspect\" style=\"padding: 0px 0px 20px 0px;\">\n				<rocks-cluster-inspector-panel></rocks-cluster-inspector-panel>\n			</uib-tab>\n			<uib-tab index=\"1\" heading=\"Filter\" style=\"padding: 0px 0px 20px 0px;\">\n				<rocks-cluster-filters></rocks-cluster-filters>\n			</uib-tab>\n		</uib-tabset>\n\n	</div>\n\n	<div class=\"rocks-accordion\">\n		<div class=\"rocks-toggle-button\" title=\"Show/hide point features WMS layer\">\n			<input\n				type=\"checkbox\"\n				ng-model=\"controlPanelVM.rocksPanelService.pointsEnabled\"\n				ng-change=\"controlPanelVM.rocksPanelService.togglePoints()\" />\n		</div>\n		<div class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'pointFeatures\')\">\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'pointFeatures\' ? \'minus\' : \'plus\' }}\"></i>\n			Point Features (WMS)\n		</div>\n	</div>\n\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'pointFeatures\'\">\n		<rocks-wms-points-legend></rocks-wms-points-legend>\n	</div>\n\n\n	<div class=\"rocks-accordion\">\n		<div class=\"rocks-toggle-button\" title=\"Show/hide point features WMS layer\">\n			<input\n				type=\"checkbox\"\n				ng-model=\"controlPanelVM.wmsInspectorService.inspectorEnabled\"\n				ng-change=\"controlPanelVM.wmsInspectorService.togglePointInspector()\" />\n		</div>\n		<div class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'wmsInspector\')\">\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'wmsInspector\' ? \'minus\' : \'plus\' }}\"></i>\n			WMS Inspector (GetFeatureInfo)\n		</div>\n	</div>\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'wmsInspector\'\">\n		<wms-inspector-panel></wms-inspector-panel>\n	</div>\n\n\n	<div class=\"rocks-accordion\">\n		<div class=\"title w100\" ng-click=\"controlPanelVM.setTargetPanel(\'clipShip\')\">\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'clipShip\' ? \'minus\' : \'plus\' }}\"></i>\n			Download Rock Property Data\n		</div>\n	</div>\n\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'clipShip\'\">\n\n		<rocks-clip-ship></rocks-clip-ship>\n\n	</div>\n\n</div>");
         $templateCache.put("rockprops/wms-inspector-panel.html", "\n<div ng-show=\"wmsInspectorVM.wmsInspectorState.view == \'INTRO\'\">\n	<div ng-if=\"wmsInspectorVM.wmsInspectorService.inspectorEnabled\">Click the map to get feature info.</div>\n	<div ng-if=\"!wmsInspectorVM.wmsInspectorService.inspectorEnabled\">Enable WMS Inspector to interrogate WMS layers.</div>\n</div>\n\n<div ng-show=\"wmsInspectorVM.wmsInspectorState.view == \'LAYERSELECT\'\">\n\n	<p style=\"margin: 10px 0px;\" tooltip=\"Approx 30m accuracy\">\n		Select a layer to query:\n		<code>\n			{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lat | number : 2}},\n			{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lon | number : 2}}\n		</code>\n	</p>\n\n	<a\n		class=\"btn btn-default\"\n		style=\"width: 100%; margin: 2px 0px\"\n		ng-click=\"wmsInspectorVM.wmsInspectorService.queryRocks()\"\n		href=\"javascript:;\">\n		Rock Properties Data\n	</a>\n\n	<a\n		ng-repeat=\"feature in wmsInspectorVM.wmsInspectorService.features\"\n		class=\"btn btn-default\"\n	   	style=\"width: 100%; margin: 2px 0px\"\n	   	ng-click=\"wmsInspectorVM.wmsInspectorService.queryFeature(feature)\"\n	   	href=\"javascript:;\">\n		{{feature.name}}\n	</a>\n\n	<a class=\"btn btn-default\"\n	   style=\"width: 100%; margin-top: 20px\"\n	   ng-click=\"wmsInspectorVM.wmsInspectorState.view = \'INTRO\'\"\n	   href=\"javascript:;\">\n		<i class=\"fa fa-times fa-lg\"></i>\n		Cancel\n	</a>\n\n</div>\n\n\n<div ng-show=\"wmsInspectorVM.wmsInspectorState.view == \'FEATUREINFO\'\">\n\n	<div ng-show=\"wmsInspectorVM.wmsInspectorService.isLoading\">\n		<div id=\"rocks-inspector-loading\"></div>\n	</div>\n\n	<div ng-hide=\"wmsInspectorVM.wmsInspectorService.isLoading\">\n\n		<p style=\"margin: 10px 0px;\" tooltip=\"Approx 30m accuracy\">\n			Feature Info for:\n			<code>\n				{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lat | number : 2}},\n				{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lon | number : 2}}\n			</code>\n		</p>\n\n		<!-- put html here.. -->\n		<div ng-bind-html=\"wmsInspectorVM.wmsInspectorService.featureInfo\"></div>\n\n	</div>\n\n	<div>\n\n		<a class=\"btn btn-default\"\n		   style=\"width: 49%; margin-top: 20px\"\n		   ng-click=\"wmsInspectorVM.wmsInspectorState.view = \'LAYERSELECT\'\"\n		   href=\"javascript:;\">\n			<i class=\"fa fa-arrow-left fa-lg\"></i>\n			Back\n		</a>\n\n		<a class=\"btn btn-default\"\n		   style=\"width: 49%; margin-top: 20px\"\n		   ng-click=\"wmsInspectorVM.wmsInspectorState.view = \'INTRO\'\"\n		   href=\"javascript:;\">\n			<i class=\"fa fa-times fa-lg\"></i>\n			Cancel\n		</a>\n\n	</div>\n\n</div>");

@@ -93,7 +93,6 @@ module rpComponents.wmsInspectorService {
 
                 // load feature classes
                 assetsService.getReferenceFeatureClasses().then((features: any) => {
-                    console.log(features);
                     this.features = features;
                 });
 

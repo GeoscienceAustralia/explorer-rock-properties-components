@@ -29,27 +29,25 @@ module rpComponents.zoom {
 
         viewer: any;
 
-        // Arbitrary height indexes: < 5000 is 0, > 5000 && < 10000 is 1 etc.
         zoomLevels: any = [
-            1000,
+            200,
+            500,
             2000,
             5000,
-            20000,
+            10000,
             50000,
             100000,
-            500000,
             1000000,
-            3000000,
-            5000000,
-            7500000,
+            1500000,
+            2000000,
+            4000000,
+            6500000,
 
-
-            // these's tile may be a broad to be meaningful
-            8400000,
+            // these's tiles are pretty broad
             8500000,
-            9000000,
-            9500000,
-            10000000
+            10000000,
+            15000000,
+            100000000
         ];
         nextIndex: number;
         previousIndex: number;

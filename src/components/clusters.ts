@@ -7,27 +7,16 @@ module rpComponents.clusterService {
 
     'use strict';
 
-    export interface IRocksClusterFilterCtrl {}
-    export class RocksClusterFilterCtrl implements IRocksClusterFilterCtrl {
-
-        static $inject = ["$scope", "clusterService", "rocksPanelService", "rocksFiltersService"];
-        constructor(
-            public $scope: ng.IScope,
-            public clusterService: rpComponents.clusterService.IClusterService,
-            public rocksPanelService: rpComponents.controlPanel.IRocksPanelService,
-            public rocksFiltersService: rpComponents.filters.IRocksFiltersService
-        ){}
-    }
-
     export interface IClusterService {
 
         viewer: any;
         serviceUrl: string;
         clustersCollection: any;
+        clusterFilter: string;
 
         toggleClusters(): boolean;
-        getClusters(heightIndex: number, extent: any): any;
-        reCluster(): void;
+        getClusters(filters?: string): any;
+        reCluster(filters?: string): void;
         buildClusterInstance(cluster: any, props: any): any;
         buildLabel(cluster: any, props: any): any;
         drawClusters(sphereInstances: any, labelCollection: any): void;
@@ -42,6 +31,7 @@ module rpComponents.clusterService {
         clusterRangeMeta: any = {
             maxExtrudeHeight: 500000
         };
+        clusterFilter: string = '';
 
         static $inject = [
             "$http",
@@ -50,7 +40,8 @@ module rpComponents.clusterService {
             "clusterChartService",
             "loadingSpinnerService",
             "rocksConfigService",
-            "clusterInspectorService"
+            "clusterInspectorService",
+            "clusterFilterState"
         ];
 
         constructor(
@@ -60,7 +51,8 @@ module rpComponents.clusterService {
             public clusterChartService: rpComponents.chartService.IClusterChartService,
             public loadingSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
             public rocksConfigService: rpComponents.config.IRocksConfigService,
-            public clusterInspectorService: rpComponents.clusterInspector.IClusterInspectorService
+            public clusterInspectorService: rpComponents.clusterInspector.IClusterInspectorService,
+            public clusterFilterState: rpComponents.filters.IClusterFilterState
 
         ) {
             this.$rootScope.$on('rocks.config.ready', () => {
@@ -116,10 +108,10 @@ module rpComponents.clusterService {
                 '&xmin='+ this.zoomLevelService.getViewExtent(100).west +
                 '&xmax='+ this.zoomLevelService.getViewExtent(100).east +
                 '&ymin='+ this.zoomLevelService.getViewExtent(100).south +
-                '&ymax='+ this.zoomLevelService.getViewExtent(100).north;
+                '&ymax='+ this.zoomLevelService.getViewExtent(100).north +
+                this.clusterFilterState.filterQuery;
 
             console.log("summary query: "+this.serviceUrl + args);
-
 
             return this.$http({
                 method: 'GET',
@@ -219,13 +211,13 @@ module rpComponents.clusterService {
                 position : Cesium.Cartesian3.fromDegrees(
                     cluster.geometry.coordinates[0],
                     cluster.geometry.coordinates[1],
-                    100 + clusterProps.extrudeHeight
+                    10000 + clusterProps.extrudeHeight
                 ),
                 text: cluster.properties.count.toString(),
                 fillColor: Cesium.Color.BLACK,
                 outlineColor: Cesium.Color.RED,
                 // TODO review labelling
-                font: (40 - this.zoomLevelService.nextIndex)+'px arial, sans-serif',
+                font: (45 - (this.zoomLevelService.nextIndex * 3))+'px arial, sans-serif',
                 horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                 id: cluster
             };
@@ -233,9 +225,12 @@ module rpComponents.clusterService {
 
         computeClusterAttributes(count: number): any {
 
+            var radius: number = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 100;
+            console.log("RADIUS "+radius);
+
             var attrs: any = {
                 // tweak these to scale cluster size/extrude on zoom
-                radius: 100000 / (this.zoomLevelService.nextIndex / 5),
+                radius: radius,
                 extrudeHeight: this.clusterRangeMeta.scale(count) / (this.zoomLevelService.nextIndex / 3)
             };
             if(count < 100){
@@ -253,14 +248,6 @@ module rpComponents.clusterService {
 
     angular
         .module('explorer.rockproperties.clusters', [])
-        .controller("rocksClusterFilterCtrl", RocksClusterFilterCtrl)
-        .directive("rocksClusterFilters", function(): ng.IDirective {
-            return {
-                templateUrl: 'rockprops/cluster-filters.html',
-                controller:  RocksClusterFilterCtrl,
-                controllerAs: 'rocksClusterFilterVM'
-            };
-        })
         .factory("clusterService", [
             "$http",
             "$rootScope",
@@ -269,6 +256,7 @@ module rpComponents.clusterService {
             "loadingSpinnerService",
             "rocksConfigService",
             "clusterInspectorService",
+            "clusterFilterState",
         (
             $http: ng.IHttpService,
             $rootScope: ng.IRootScopeService,
@@ -276,7 +264,8 @@ module rpComponents.clusterService {
             clusterChartService: rpComponents.chartService.IClusterChartService,
             chartSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
             rocksConfigService: rpComponents.config.IRocksConfigService,
-            clusterInspectorService: rpComponents.clusterInspector.IClusterInspectorService
+            clusterInspectorService: rpComponents.clusterInspector.IClusterInspectorService,
+            clusterFilterState: rpComponents.filters.IClusterFilterState
         ) =>
         new rpComponents.clusterService.ClusterService(
             $http,
@@ -285,7 +274,8 @@ module rpComponents.clusterService {
             clusterChartService,
             chartSpinnerService,
             rocksConfigService,
-            clusterInspectorService
+            clusterInspectorService,
+            clusterFilterState
         )]);
 
 }

@@ -88,11 +88,7 @@ module rpComponents.queryBuilderExport {
                 // give zip file to decent browsers
                 if(JSZip.support.blob){
 
-                    //showLoading = true;
                     var promises: any = [];
-
-                    console.log("this.wfsLayerNames");
-                    console.log(this.wfsLayerNames);
 
                     // create a Get query for each layer
                     for(var i = 0; i < this.wfsLayerNames.length; i++){
@@ -189,7 +185,7 @@ module rpComponents.queryBuilderExport {
                 this.propertyQuery = this.getPropertyQuery(properties);
             }
 
-            //ga('send', 'event', 'explorer-rock-properties', 'click', 'data export: '+ format);
+            ga('send', 'event', 'explorer-rock-properties', 'click', 'clipship data export: '+ format);
             query =  this.baseUrl + typeNamesQuery + exportFormat + bboxQuery + filterQuery + this.propertyQuery;
             return query;
         }

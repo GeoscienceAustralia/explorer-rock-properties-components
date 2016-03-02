@@ -55,7 +55,8 @@ module rpComponents.clusterInspector {
             "zoomLevelService",
             "loadingSpinnerService",
             "rocksConfigService",
-            "clusterChartService"
+            "clusterChartService",
+            "clusterFilterState"
         ];
 
         constructor(
@@ -65,7 +66,8 @@ module rpComponents.clusterInspector {
             public zoomLevelService: rpComponents.zoom.IZoomLevelService,
             public loadingSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
             public rocksConfigService: rpComponents.config.IRocksConfigService,
-            public clusterChartService: rpComponents.chartService.IClusterChartService
+            public clusterChartService: rpComponents.chartService.IClusterChartService,
+            public clusterFilterState: rpComponents.filters.IClusterFilterState
         ) {
             this.$rootScope.$on('rocks.config.ready', () => {
                 this.init();
@@ -139,7 +141,8 @@ module rpComponents.clusterInspector {
             var args: string =
                 '?zoom='+this.zoomLevelService.nextIndex +
                 '&x='+ Cesium.Math.toDegrees(this.targetPos.longitude) +
-                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude);
+                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude)
+                this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'query' + args;
 
@@ -198,7 +201,8 @@ module rpComponents.clusterInspector {
                 '&maxCount='+this.maxListStep +
                 '&startIndex='+ this.listIndex +
                 '&x='+ Cesium.Math.toDegrees(this.targetPos.longitude) +
-                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude);
+                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude)
+                this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'features' + args;
 
@@ -291,6 +295,7 @@ module rpComponents.clusterInspector {
             "loadingSpinnerService",
             "rocksConfigService",
             "clusterChartService",
+            "clusterFilterState",
         (
             $http: ng.IHttpService,
             $rootScope: ng.IRootScopeService,
@@ -298,7 +303,8 @@ module rpComponents.clusterInspector {
             zoomLevelService: rpComponents.zoom.IZoomLevelService,
             chartSpinnerService: rpComponents.spinnerService.ILoadingSpinnerService,
             rocksConfigService: rpComponents.config.IRocksConfigService,
-            clusterChartService: rpComponents.chartService.IClusterChartService
+            clusterChartService: rpComponents.chartService.IClusterChartService,
+            clusterFilterState: rpComponents.filters.IClusterFilterState
         ) =>
             new rpComponents.clusterInspector.ClusterInspectorService(
                 $http,
@@ -307,6 +313,7 @@ module rpComponents.clusterInspector {
                 zoomLevelService,
                 chartSpinnerService,
                 rocksConfigService,
-                clusterChartService
+                clusterChartService,
+                clusterFilterState
             )]);
 }

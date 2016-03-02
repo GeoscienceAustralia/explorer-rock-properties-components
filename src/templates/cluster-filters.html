@@ -12,8 +12,7 @@
 
 		<label style="font-size: 11px;" title="{{filter.filterLabel}}">{{filter.filterLabel}}</label>
 		<select
-				ng-change="filterChanged(filter.filterType, filter.SelectedOption)"
-				ng-model="filter.SelectedOption"
+				ng-model="filter.ClusterOption"
 				name="filter.filterType"
 				ng-options="option as option for option in filter.filterOptions"
 				ng-class='form-control'
@@ -25,12 +24,12 @@
 	</div>
 
 	<div style="text-align: center;">
-		<a class="btn btn-default" style="margin: 10px;" ng-click="applyFilters()" href="javascript:;">
+		<a class="btn btn-default" style="margin: 10px;" ng-click="rocksClusterFilterVM.rocksFiltersService.applyFilters()" href="javascript:;">
 			<i class="fa fa-filter fa-lg"></i>
 			Apply
 		</a>
 
-		<a class="btn btn-default" style="margin: 10px;" ng-click="clearFilters()" href="javascript:;">
+		<a class="btn btn-default" style="margin: 10px;" ng-click="rocksClusterFilterVM.rocksFiltersService.clearFilters()" href="javascript:;">
 			<i class="fa fa-remove fa-lg"></i>
 			Clear
 		</a>

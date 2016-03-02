@@ -25,12 +25,16 @@
 
 	<div ng-show="clusterInspectorVM.clusterInspectorService.listReady">
 
-		<div class="alert alert-success" style="margin-top: 30px;">
+		<div ng-if="clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures > 0" class="alert alert-success" style="margin-top: 30px;">
 			Features loaded:
 			{{
 				clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures +
 				clusterInspectorVM.clusterInspectorService.listIndex
 			}}
+		</div>
+
+		<div ng-if="!(clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures > 0)" class="alert alert-warning" style="margin-top: 30px;">
+			No more features to load at this location.
 		</div>
 
 		<div ng-repeat="feature in clusterInspectorVM.clusterInspectorService.listFeatures.features" class="rocks-result-list-feature">
