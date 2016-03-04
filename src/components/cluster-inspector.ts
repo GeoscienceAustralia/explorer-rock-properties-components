@@ -154,11 +154,11 @@ module rpComponents.clusterInspector {
                 method: 'GET',
 
                 // mock
-                url: this.serviceUrl + '/geojson-cluster.json'
+                //url: this.serviceUrl + '/geojson-cluster.json'
                 //url: this.serviceUrl + '/cluster.json'
 
                 // real service
-                //url: query
+                url: query
 
             }).then((response: any) => {
 
@@ -198,7 +198,7 @@ module rpComponents.clusterInspector {
 
             var args: string =
                 '?zoom='+this.zoomLevelService.nextIndex +
-                '&maxCount='+this.maxListStep +
+                //'&maxCount='+this.maxListStep +
                 '&startIndex='+ this.listIndex +
                 '&x='+ Cesium.Math.toDegrees(this.targetPos.longitude) +
                 '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude)
@@ -214,10 +214,10 @@ module rpComponents.clusterInspector {
                 method: 'GET',
 
                 // mock
-                url: this.serviceUrl + '/mock-feature-list.json'
+                //url: this.serviceUrl + '/mock-feature-list.json'
 
                 // real service
-                //url: query
+                url: query
 
             }).then((response: any) => {
 

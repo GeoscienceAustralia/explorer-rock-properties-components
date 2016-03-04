@@ -101,14 +101,20 @@ module rpComponents.clusterService {
          * @returns {IHttpPromise<T>}
          */
         public getClusters(): any {
+            var west = this.zoomLevelService.getViewExtent(100).west;
+            var east = this.zoomLevelService.getViewExtent(100).east;
+            var north = this.zoomLevelService.getViewExtent(100).north;
+            var south = this.zoomLevelService.getViewExtent(100).south;
+            var dx = (east - west) * .2;
+            var dy = (north - south) * .2;
 
             // args
             var args: string =
                 '?zoom='+this.zoomLevelService.nextIndex +
-                '&xmin='+ this.zoomLevelService.getViewExtent(100).west +
-                '&xmax='+ this.zoomLevelService.getViewExtent(100).east +
-                '&ymin='+ this.zoomLevelService.getViewExtent(100).south +
-                '&ymax='+ this.zoomLevelService.getViewExtent(100).north +
+                '&xmin='+ above(west - dx, -180) +
+                '&xmax='+ below(east + dx, 180) +
+                '&ymin='+ above(south - dy, -90) +
+                '&ymax='+ below(north + dy, 90) +
                 this.clusterFilterState.filterQuery;
 
             console.log("summary query: "+this.serviceUrl + args);
@@ -117,11 +123,16 @@ module rpComponents.clusterService {
                 method: 'GET',
 
                 // real service
-                //url: this.serviceUrl + 'summary' + args
-
-                // mock
-                url: this.serviceUrl +'mock-summary-'+ this.zoomLevelService.nextIndex + '.json'
+                url: this.serviceUrl + 'summary' + args
             });
+            
+            function above(value:number, limit:number): number {
+                return value < limit? limit: value;
+            }
+            
+            function below(value:number, limit:number): number {
+                return value > limit? limit: value;
+            }
         }
 
         /**
