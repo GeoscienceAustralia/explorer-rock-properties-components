@@ -152,12 +152,9 @@ module rpComponents.clusterInspector {
             this.$http({
 
                 method: 'GET',
-
                 // mock
                 //url: this.serviceUrl + '/geojson-cluster.json'
                 //url: this.serviceUrl + '/cluster.json'
-
-                // real service
                 url: query
 
             }).then((response: any) => {
