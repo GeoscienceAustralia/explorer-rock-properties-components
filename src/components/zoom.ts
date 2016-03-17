@@ -30,13 +30,13 @@ module rpComponents.zoom {
         viewer: any;
 
         zoomLevels: any = [
-            200,
-            500,
-            2000,
             5000,
             10000,
+            20000,
+            30000,
             50000,
-            100000,
+            80000,
+            200000,
             1000000,
             1500000,
             2000000,
@@ -80,8 +80,7 @@ module rpComponents.zoom {
                 this.$rootScope.$broadcast('rocks.clusters.update', this.nextIndex);
             }
 
-            console.log("HEIGHT");
-            console.log(Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
+            console.log("INDEX = " + this.nextIndex + " HEIGHT = " + Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
 
             this.previousIndex = this.nextIndex;
         };

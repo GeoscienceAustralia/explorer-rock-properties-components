@@ -44,6 +44,12 @@ gulp.task('watch', function() {
     gulp.watch('src/components/**/*(*.ts|*.html)', ['lint', 'scripts']);
 	gulp.watch('src/templates/*.html', ['lint', 'scripts']);
     gulp.watch('src/scss/*.scss', ['sass', 'concatCss', 'cssNano']);
+    gulp.watch('dist/*', ['moveIt']);
+});
+
+gulp.task('moveIt', function () {
+	gulp.src('dist/*')
+		.pipe(gulp.dest('../explorer-rock-properties/src/main/webapp/bower_components/explorer-rock-properties-components/dist'));
 });
 
 gulp.task('sass', function () {

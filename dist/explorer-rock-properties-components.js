@@ -619,7 +619,6 @@ var rpComponents;
                     // mock
                     //url: this.serviceUrl + '/geojson-cluster.json'
                     //url: this.serviceUrl + '/cluster.json'
-                    // real service
                     url: query
                 }).then(function (response) {
                     if (response.hasOwnProperty('data')) {
@@ -762,7 +761,7 @@ var rpComponents;
                 this.clusterInspectorService = clusterInspectorService;
                 this.clusterFilterState = clusterFilterState;
                 this.clusterRangeMeta = {
-                    maxExtrudeHeight: 500000
+                    maxExtrudeHeight: 6000000
                 };
                 this.clusterFilter = '';
                 /**
@@ -780,10 +779,12 @@ var rpComponents;
                             // use d3 to build a scale for our extrude heights; we need to build a diff scale
                             // for each zoom level, as we can't guarantee they'll start at the top and work down
                             // (if we add persistence)
+                            var maxCorrection = Math.pow(1.43, _this.zoomLevelService.nextIndex);
+                            console.log("Mac correction" + maxCorrection);
                             _this.clusterRangeMeta.maxCount = d3.max(clusters, function (d) { return d.properties.count; });
                             _this.clusterRangeMeta.scale = d3.scale.linear()
                                 .domain([0, _this.clusterRangeMeta.maxCount])
-                                .range([0, _this.clusterRangeMeta.maxExtrudeHeight]);
+                                .range([0, _this.clusterRangeMeta.maxExtrudeHeight / maxCorrection]);
                             for (var i = 0; i < clusters.length; i++) {
                                 // tag id with type for pick handling
                                 clusters[i].properties['featureType'] = 'rockPropsCluster';
@@ -1765,13 +1766,13 @@ var rpComponents;
                 this.$rootScope = $rootScope;
                 this.rocksConfigService = rocksConfigService;
                 this.zoomLevels = [
-                    200,
-                    500,
-                    2000,
                     5000,
                     10000,
+                    20000,
+                    30000,
                     50000,
-                    100000,
+                    80000,
+                    200000,
                     1000000,
                     1500000,
                     2000000,
@@ -1795,8 +1796,7 @@ var rpComponents;
                     if (_this.previousIndex > -1 && _this.previousIndex != _this.nextIndex) {
                         _this.$rootScope.$broadcast('rocks.clusters.update', _this.nextIndex);
                     }
-                    console.log("HEIGHT");
-                    console.log(Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.position).height);
+                    console.log("INDEX = " + _this.nextIndex + " HEIGHT = " + Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.position).height);
                     _this.previousIndex = _this.nextIndex;
                 };
                 this.$rootScope.$on('rocks.config.ready', function () {

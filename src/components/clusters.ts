@@ -29,7 +29,7 @@ module rpComponents.clusterService {
         clusterPrimitive: any;
         clustersCollection: any;
         clusterRangeMeta: any = {
-            maxExtrudeHeight: 500000
+            maxExtrudeHeight: 6000000
         };
         clusterFilter: string = '';
 
@@ -149,16 +149,17 @@ module rpComponents.clusterService {
             this.getClusters().then((response: any) => {
 
                 if(response.data && response.data.features){
-
                     var clusters: [any] = response.data.features;
 
                     // use d3 to build a scale for our extrude heights; we need to build a diff scale
                     // for each zoom level, as we can't guarantee they'll start at the top and work down
                     // (if we add persistence)
-                    this.clusterRangeMeta.maxCount = d3.max(clusters, function(d: any) { return d.properties.count; });
+                    let maxCorrection = Math.pow(1.43, this.zoomLevelService.nextIndex);
+                    console.log("Mac correction" + maxCorrection);
+                    this.clusterRangeMeta.maxCount = d3.max(clusters, (d: any) => { return d.properties.count; });
                     this.clusterRangeMeta.scale = d3.scale.linear()
                         .domain([0, this.clusterRangeMeta.maxCount])
-                        .range([0, this.clusterRangeMeta.maxExtrudeHeight]);
+                        .range([0, this.clusterRangeMeta.maxExtrudeHeight / maxCorrection]);
 
                     for(var i = 0; i < clusters.length; i++){
 
