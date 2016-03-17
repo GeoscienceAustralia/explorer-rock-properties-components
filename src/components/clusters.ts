@@ -22,6 +22,16 @@ module rpComponents.clusterService {
         drawClusters(sphereInstances: any, labelCollection: any): void;
     }
 
+    export interface IClusterHeightWeighter {
+        calculateWeighting(zoom: number);
+    }
+
+    export class ClusterHeightWeighter implements IClusterHeightWeighter {
+        calculateWeighting(zoom: number) {
+            return Math.pow(1.43, zoom);
+        }
+    }
+
     export class ClusterService implements IClusterService {
 
         viewer: any;
@@ -154,8 +164,7 @@ module rpComponents.clusterService {
                     // use d3 to build a scale for our extrude heights; we need to build a diff scale
                     // for each zoom level, as we can't guarantee they'll start at the top and work down
                     // (if we add persistence)
-                    let maxCorrection = Math.pow(1.43, this.zoomLevelService.nextIndex);
-                    console.log("Mac correction" + maxCorrection);
+                    let maxCorrection = new ClusterHeightWeighter().calculateWeighting(this.zoomLevelService.nextIndex);
                     this.clusterRangeMeta.maxCount = d3.max(clusters, (d: any) => { return d.properties.count; });
                     this.clusterRangeMeta.scale = d3.scale.linear()
                         .domain([0, this.clusterRangeMeta.maxCount])
