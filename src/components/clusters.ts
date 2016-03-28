@@ -27,7 +27,7 @@ module rpComponents.clusterService {
     }
 
     export class ClusterHeightWeighter implements IClusterHeightWeighter {
-        calculateWeighting(zoom: number) {
+        calculateWeighting(zoom: number): number {
             return Math.pow(1.43, zoom);
         }
     }

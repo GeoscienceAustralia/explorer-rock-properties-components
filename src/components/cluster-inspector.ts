@@ -27,12 +27,39 @@ module rpComponents.clusterInspector {
         setClusterPrimitive(primitive: any): void;
         loadNextListStep(): void;
     }
+    
+    export interface IPagingState {
+        count: number;
+        total: number;
+        
+        more():boolean;
+    }
+    
+    export class PagingState implements IPagingState {
+        public count: number;
+        public total: number;
+        
+        constructor(
+            count: number,
+            total: number
+        ) {
+            this.count = count;
+            this.total = total;
+        }
+        
+        public more(): boolean {
+            return this.total > this.count;  
+        } 
+    }
+    
     export class ClusterInspectorService implements IClusterInspectorService {
 
         public inspectMode: string = "CHART";
         public listReady: boolean = false;
         public listFeatures: any;
         public listIndex: number;
+        public pageIndex: number;
+        public pagingState: PagingState;
 
         // TODO decide reasonable step size when plugged into real service
         public maxListStep: number = 100;
@@ -76,6 +103,7 @@ module rpComponents.clusterInspector {
 
         /**
          *
+         
          * @param viewer
          * @param summaryService
          * @param usePicking
@@ -141,7 +169,7 @@ module rpComponents.clusterInspector {
             var args: string =
                 '?zoom='+this.zoomLevelService.nextIndex +
                 '&x='+ Cesium.Math.toDegrees(this.targetPos.longitude) +
-                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude)
+                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude) +
                 this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'query' + args;
@@ -152,9 +180,6 @@ module rpComponents.clusterInspector {
             this.$http({
 
                 method: 'GET',
-                // mock
-                //url: this.serviceUrl + '/geojson-cluster.json'
-                //url: this.serviceUrl + '/cluster.json'
                 url: query
 
             }).then((response: any) => {
@@ -195,10 +220,10 @@ module rpComponents.clusterInspector {
 
             var args: string =
                 '?zoom='+this.zoomLevelService.nextIndex +
-                //'&maxCount='+this.maxListStep +
+                '&maxCount='+this.maxListStep +
                 '&startIndex='+ this.listIndex +
                 '&x='+ Cesium.Math.toDegrees(this.targetPos.longitude) +
-                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude)
+                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude) +
                 this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'features' + args;
@@ -232,7 +257,8 @@ module rpComponents.clusterInspector {
                         else {
                             this.listFeatures = response.data;
                         }
-
+                        let morePages = this.listFeatures.features.length < this.listFeatures.totalFeatures;
+                        this.pagingState = new PagingState(this.listFeatures.features.length, this.listFeatures.totalFeatures);
                     }, 1000);
                 }
             });

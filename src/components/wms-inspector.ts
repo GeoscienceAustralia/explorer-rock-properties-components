@@ -152,6 +152,8 @@ module rpComponents.wmsInspectorService {
                 }
             }
 
+
+
             var queryString =
 
                 '?SERVICE=WMS'+
@@ -166,10 +168,10 @@ module rpComponents.wmsInspectorService {
                 // and offset the top right by ~30 meters
                 // (can be hard to click on a point if res is too fine)
                 '&BBOX=' +
-                this.wmsInspectorState.targetGeom.degrees.lon +','+
-                this.wmsInspectorState.targetGeom.degrees.lat +','+
-                (this.wmsInspectorState.targetGeom.degrees.lon + 0.0003) +','+
-                (this.wmsInspectorState.targetGeom.degrees.lat + 0.0003) +
+                (this.wmsInspectorState.targetGeom.degrees.lon - 0.004) +','+
+                (this.wmsInspectorState.targetGeom.degrees.lat - 0.004) +','+
+                (this.wmsInspectorState.targetGeom.degrees.lon + 0.008) +','+
+                (this.wmsInspectorState.targetGeom.degrees.lat + 0.008) +
 
                 '&QUERY_LAYERS='+ targetLayers +
                 '&INFO_FORMAT=text%2Fhtml'+

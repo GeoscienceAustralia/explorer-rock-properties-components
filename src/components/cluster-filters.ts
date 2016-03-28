@@ -104,7 +104,7 @@ module rpComponents.filters {
             var query = '';
 
             for(var i = 0; i < this.filters.length; i++){
-                if(this.filters[i].hasOwnProperty('ClusterOption') && this.filters[i].ClusterOption != false){
+                if(this.filters[i].hasOwnProperty('ClusterOption') && this.filters[i].ClusterOption){
                     query = query + '&filter='+ encodeURIComponent(this.filters[i].filterType +'='+ this.filters[i].ClusterOption);
                 }
             }

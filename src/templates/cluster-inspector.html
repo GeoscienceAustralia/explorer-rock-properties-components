@@ -26,15 +26,10 @@
 	<div ng-show="clusterInspectorVM.clusterInspectorService.listReady">
 
 		<div ng-if="clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures > 0" class="alert alert-success" style="margin-top: 30px;">
-			Features loaded:
-			{{
-				clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures +
-				clusterInspectorVM.clusterInspectorService.listIndex
-			}}
-		</div>
-
-		<div ng-if="!(clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures > 0)" class="alert alert-warning" style="margin-top: 30px;">
-			No more features to load at this location.
+			Features loaded: {{clusterInspectorVM.clusterInspectorService.pagingState.count}} of 
+							{{clusterInspectorVM.clusterInspectorService.pagingState.total}}
+			<button ng-show="clusterInspectorVM.clusterInspectorService.pagingState.more()"  class="undecorated btn-sm"
+					style="float:right" ng-click="clusterInspectorVM.clusterInspectorService.loadNextListStep()">-More-</button>
 		</div>
 
 		<div ng-repeat="feature in clusterInspectorVM.clusterInspectorService.listFeatures.features" class="rocks-result-list-feature">
@@ -56,14 +51,12 @@
 			</table>
 		</div>
 
-		<a
-			ng-show="clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures <= clusterInspectorVM.clusterInspectorService.maxListStep"
-			class="btn btn-default"
-			style="margin-top: 40px; width: 100%;"
-			ng-click="clusterInspectorVM.clusterInspectorService.loadNextListStep()"
-			href="javascript:;">
-			Load more records
-		</a>
+		<div ng-show="clusterInspectorVM.clusterInspectorService.pagingState.more()">
+			<span>{{clusterInspectorVM.clusterInspectorService.pagingState.count}} of {{clusterInspectorVM.clusterInspectorService.pagingState.total}}</span>
+			<span style="float:right">
+				<button class="undecorated btn-sm" ng-click="clusterInspectorVM.clusterInspectorService.loadNextListStep()">-More-</button>
+			</span>
+		</div>
 
 	</div>
 
