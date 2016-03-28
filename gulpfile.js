@@ -48,8 +48,8 @@ gulp.task('watch', function() {
 });
 
 gulp.task('moveIt', function () {
-	gulp.src('dist/*')
-		.pipe(gulp.dest('../explorer-rock-properties/src/main/webapp/bower_components/explorer-rock-properties-components/dist'));
+	//gulp.src('dist/*')
+	//	.pipe(gulp.dest('../explorer-rock-properties/src/main/webapp/bower_components/explorer-rock-properties-components/dist'));
 });
 
 gulp.task('sass', function () {
