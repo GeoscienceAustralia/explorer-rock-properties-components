@@ -216,7 +216,7 @@ module rpComponents.wmsInspectorService {
     }
 
     angular
-        .module('explorer.rockproperties.inspector', ['explorer.assets'])
+        .module('explorer.rockproperties.inspector', [])
         .factory("wmsInspectorService", [
             "$rootScope",
             "$http",
