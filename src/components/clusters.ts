@@ -18,7 +18,7 @@ module rpComponents.clusterService {
         getClusters(filters?: string): any;
         reCluster(filters?: string): void;
         buildClusterInstance(cluster: any, props: any): any;
-        buildLabel(cluster: any, props: any): any;
+        // buildLabel(cluster: any, props: any): any; // No labels at the moment
         drawClusters(sphereInstances: any, labelCollection: any): void;
     }
 
@@ -177,7 +177,7 @@ module rpComponents.clusterService {
 
                         var clusterProps: any = this.computeClusterAttributes(clusters[i].properties.count);
                         clusterInstances.push(this.buildClusterInstance(clusters[i], clusterProps));
-                        labelCollection.add(this.buildLabel(clusters[i], clusterProps));
+                        //labelCollection.add(this.buildLabel(clusters[i], clusterProps)); // No lables for the short term
                     }
 
                     this.drawClusters(clusterInstances, labelCollection);
@@ -217,7 +217,7 @@ module rpComponents.clusterService {
                     ),
                     radius : clusterProps.radius,
                     vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-                    extrudedHeight: clusterProps.extrudeHeight
+                    extrudedHeight: clusterProps.extrudeHeight / 2.5
                 }),
                 id : cluster,
                 attributes : {
@@ -232,13 +232,13 @@ module rpComponents.clusterService {
                 position : Cesium.Cartesian3.fromDegrees(
                     cluster.geometry.coordinates[0],
                     cluster.geometry.coordinates[1],
-                    10000 + clusterProps.extrudeHeight
+                    clusterProps.extrudeHeight * 1.1 + clusterProps.radius
                 ),
                 text: cluster.properties.count.toString(),
                 fillColor: Cesium.Color.BLACK,
                 outlineColor: Cesium.Color.RED,
                 // TODO review labelling
-                font: (45 - (this.zoomLevelService.nextIndex * 3))+'px arial, sans-serif',
+                font: (30 - (this.zoomLevelService.nextIndex * 0.2)) +'px arial, sans-serif',
                 horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                 id: cluster
             };
@@ -246,7 +246,7 @@ module rpComponents.clusterService {
 
         computeClusterAttributes(count: number): any {
 
-            var radius: number = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 100;
+            var radius: number = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 160;
             console.log("RADIUS "+radius);
 
             var attrs: any = {
@@ -257,10 +257,12 @@ module rpComponents.clusterService {
             if(count < 100){
                 attrs.color = Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5);
             }
-            else if(count >= 10 && count < 1000){
+            else if(count < 1000){
+                attrs.radius *= 1.3;
                 attrs.color = Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5);
             }
             else {
+                attrs.radius *= 1.6;
                 attrs.color = Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5);
             }
             return attrs;

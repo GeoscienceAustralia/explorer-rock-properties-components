@@ -809,7 +809,6 @@ var rpComponents;
                                 clusters[i].properties['featureType'] = 'rockPropsCluster';
                                 var clusterProps = _this.computeClusterAttributes(clusters[i].properties.count);
                                 clusterInstances.push(_this.buildClusterInstance(clusters[i], clusterProps));
-                                labelCollection.add(_this.buildLabel(clusters[i], clusterProps));
                             }
                             _this.drawClusters(clusterInstances, labelCollection);
                         }
@@ -900,7 +899,7 @@ var rpComponents;
                         center: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1]),
                         radius: clusterProps.radius,
                         vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-                        extrudedHeight: clusterProps.extrudeHeight
+                        extrudedHeight: clusterProps.extrudeHeight / 2.5
                     }),
                     id: cluster,
                     attributes: {
@@ -910,18 +909,18 @@ var rpComponents;
             };
             ClusterService.prototype.buildLabel = function (cluster, clusterProps) {
                 return {
-                    position: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1], 10000 + clusterProps.extrudeHeight),
+                    position: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1], clusterProps.extrudeHeight * 1.1 + clusterProps.radius),
                     text: cluster.properties.count.toString(),
                     fillColor: Cesium.Color.BLACK,
                     outlineColor: Cesium.Color.RED,
                     // TODO review labelling
-                    font: (45 - (this.zoomLevelService.nextIndex * 3)) + 'px arial, sans-serif',
+                    font: (30 - (this.zoomLevelService.nextIndex * 0.2)) + 'px arial, sans-serif',
                     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                     id: cluster
                 };
             };
             ClusterService.prototype.computeClusterAttributes = function (count) {
-                var radius = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 100;
+                var radius = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 160;
                 console.log("RADIUS " + radius);
                 var attrs = {
                     // tweak these to scale cluster size/extrude on zoom
@@ -931,10 +930,12 @@ var rpComponents;
                 if (count < 100) {
                     attrs.color = Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5);
                 }
-                else if (count >= 10 && count < 1000) {
+                else if (count < 1000) {
+                    attrs.radius *= 1.3;
                     attrs.color = Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5);
                 }
                 else {
+                    attrs.radius *= 1.6;
                     attrs.color = Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5);
                 }
                 return attrs;
