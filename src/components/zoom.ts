@@ -15,9 +15,11 @@ module rpComponents.zoom {
     export interface IZoomLevelService {
         viewer: any;
         zoomLevels: any;
-        nextIndex: number;
-        previousIndex: number;
+        nextPosition: any;
+        previousPosition: any;
         defaultExtent: any;
+        
+        nextIndex: number;
 
         setActive(active:boolean): void;
         moveEndHandler(): void;
@@ -49,8 +51,9 @@ module rpComponents.zoom {
             15000000,
             100000000
         ];
-        nextIndex: number;
-        previousIndex: number;
+        previousPosition: any;
+        nextPosition: any;
+        
         defaultExtent: any = {
             "west": 109,
             "south": -45,
@@ -71,18 +74,23 @@ module rpComponents.zoom {
                 this.viewer = this.rocksConfigService.viewer;
             });
         }
+        
+        public get nextIndex(): number {
+           return this.getIndex(this.nextPosition.height);
+        }
         public moveEndHandler = () => {
-
-            this.nextIndex = this.getIndex(Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
-
-            // changed indexes, trigger recluster
-            if(this.previousIndex > -1 && this.previousIndex != this.nextIndex){
+            this.nextPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position);
+            // changed indexes or exceed threshold for pan, trigger recluster
+            if((this.previousPosition.height > -1 && this.getIndex(this.previousPosition.height) != this.nextIndex) || 
+               (Math.abs(this.nextPosition.latitude - this.previousPosition.latitude) > 0.01 / this.nextIndex ||
+                Math.abs(this.nextPosition.longitude - this.previousPosition.longitude) > 0.01 / this.nextIndex)
+            ) {
                 this.$rootScope.$broadcast('rocks.clusters.update', this.nextIndex);
             }
 
             console.log("INDEX = " + this.nextIndex + " HEIGHT = " + Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
 
-            this.previousIndex = this.nextIndex;
+            this.previousPosition = this.nextPosition;
         };
 
         /**
@@ -104,9 +112,7 @@ module rpComponents.zoom {
         public setActive(active:boolean) {
             if(active) {
                 // TODO extent
-                this.previousIndex = this.getIndex(Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
-                this.nextIndex = this.previousIndex;
-
+                this.nextPosition = this.previousPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position);
                 this.viewer.camera.moveEnd.addEventListener(this.moveEndHandler);
             }
             else {
