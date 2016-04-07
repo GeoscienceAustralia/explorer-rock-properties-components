@@ -28,6 +28,7 @@ gulp.task('scripts', function() {
         .pipe(sourceMaps.init())
         .pipe(ts({
             noImplicitAny: true,
+            target: 'ES5',
             suppressImplicitAnyIndexErrors: true,
             out: 'explorer-rock-properties-components.js'
         }))
