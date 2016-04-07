@@ -217,7 +217,7 @@ module rpComponents.clusterService {
                     ),
                     radius : clusterProps.radius,
                     vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-                    extrudedHeight: clusterProps.extrudeHeight / 2.5
+                    extrudedHeight: clusterProps.extrudeHeight
                 }),
                 id : cluster,
                 attributes : {
@@ -232,7 +232,7 @@ module rpComponents.clusterService {
                 position : Cesium.Cartesian3.fromDegrees(
                     cluster.geometry.coordinates[0],
                     cluster.geometry.coordinates[1],
-                    clusterProps.extrudeHeight / 2.5 + clusterProps.radius + 30
+                    clusterProps.extrudeHeight + clusterProps.radius + 30
                 ),
                 text: cluster.properties.count.toString(),
                 fillColor: Cesium.Color.BLACK,
@@ -246,13 +246,22 @@ module rpComponents.clusterService {
 
         computeClusterAttributes(count: number): any {
 
-            var radius: number = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 160;
-            console.log("RADIUS "+radius);
+            var radius: number = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 150;
+            var maxHeight = this.zoomLevelService.nextPosition.height * 0.6;
+            var extrudeHeight = this.clusterRangeMeta.scale(count) / Math.pow(this.zoomLevelService.nextIndex / 3, 1.15) ;
+            if(extrudeHeight > maxHeight) {
+               extrudeHeight = maxHeight; 
+            }
+            
+            if(radius > maxHeight / 20) {
+               console.log("To big!");
+               radius = maxHeight / 20;
+            }
 
             var attrs: any = {
                 // tweak these to scale cluster size/extrude on zoom
                 radius: radius,
-                extrudeHeight: this.clusterRangeMeta.scale(count) / (this.zoomLevelService.nextIndex / 3)
+                extrudeHeight: extrudeHeight
             };
             if(count < 100){
                 attrs.color = Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5);
