@@ -809,6 +809,7 @@ var rpComponents;
                                 clusters[i].properties['featureType'] = 'rockPropsCluster';
                                 var clusterProps = _this.computeClusterAttributes(clusters[i].properties.count);
                                 clusterInstances.push(_this.buildClusterInstance(clusters[i], clusterProps));
+                                labelCollection.add(_this.buildLabel(clusters[i], clusterProps)); // No lables for the short term
                             }
                             _this.drawClusters(clusterInstances, labelCollection);
                         }
@@ -909,12 +910,12 @@ var rpComponents;
             };
             ClusterService.prototype.buildLabel = function (cluster, clusterProps) {
                 return {
-                    position: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1], clusterProps.extrudeHeight * 1.1 + clusterProps.radius),
+                    position: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1], clusterProps.extrudeHeight / 2.5 + clusterProps.radius + 30),
                     text: cluster.properties.count.toString(),
                     fillColor: Cesium.Color.BLACK,
                     outlineColor: Cesium.Color.RED,
                     // TODO review labelling
-                    font: (30 - (this.zoomLevelService.nextIndex * 0.2)) + 'px arial, sans-serif',
+                    font: (26 - (this.zoomLevelService.nextIndex * 0.2)) + 'px arial, sans-serif',
                     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                     id: cluster
                 };
@@ -1580,10 +1581,10 @@ var rpComponents;
                     // and offset the top right by ~30 meters
                     // (can be hard to click on a point if res is too fine)
                     '&BBOX=' +
-                    (this.wmsInspectorState.targetGeom.degrees.lon - 0.004) + ',' +
-                    (this.wmsInspectorState.targetGeom.degrees.lat - 0.004) + ',' +
-                    (this.wmsInspectorState.targetGeom.degrees.lon + 0.008) + ',' +
-                    (this.wmsInspectorState.targetGeom.degrees.lat + 0.008) +
+                    (this.wmsInspectorState.targetGeom.degrees.lon) + ',' +
+                    (this.wmsInspectorState.targetGeom.degrees.lat) + ',' +
+                    (this.wmsInspectorState.targetGeom.degrees.lon + 0.003) + ',' +
+                    (this.wmsInspectorState.targetGeom.degrees.lat + 0.003) +
                     '&QUERY_LAYERS=' + targetLayers +
                     '&INFO_FORMAT=text%2Fhtml' +
                     '&FEATURE_COUNT=100' +
@@ -1811,18 +1812,27 @@ var rpComponents;
                     "north": -8
                 };
                 this.moveEndHandler = function () {
-                    _this.nextIndex = _this.getIndex(Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.position).height);
-                    // changed indexes, trigger recluster
-                    if (_this.previousIndex > -1 && _this.previousIndex != _this.nextIndex) {
+                    _this.nextPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.position);
+                    // changed indexes or exceed threshold for pan, trigger recluster
+                    if ((_this.previousPosition.height > -1 && _this.getIndex(_this.previousPosition.height) != _this.nextIndex) ||
+                        (Math.abs(_this.nextPosition.latitude - _this.previousPosition.latitude) > 0.01 / _this.nextIndex ||
+                            Math.abs(_this.nextPosition.longitude - _this.previousPosition.longitude) > 0.01 / _this.nextIndex)) {
                         _this.$rootScope.$broadcast('rocks.clusters.update', _this.nextIndex);
                     }
                     console.log("INDEX = " + _this.nextIndex + " HEIGHT = " + Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.position).height);
-                    _this.previousIndex = _this.nextIndex;
+                    _this.previousPosition = _this.nextPosition;
                 };
                 this.$rootScope.$on('rocks.config.ready', function () {
                     _this.viewer = _this.rocksConfigService.viewer;
                 });
             }
+            Object.defineProperty(ZoomLevelService.prototype, "nextIndex", {
+                get: function () {
+                    return this.getIndex(this.nextPosition.height);
+                },
+                enumerable: true,
+                configurable: true
+            });
             /**
              *
              * Get the lowest index the height fits into
@@ -1841,8 +1851,7 @@ var rpComponents;
             ZoomLevelService.prototype.setActive = function (active) {
                 if (active) {
                     // TODO extent
-                    this.previousIndex = this.getIndex(Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
-                    this.nextIndex = this.previousIndex;
+                    this.nextPosition = this.previousPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position);
                     this.viewer.camera.moveEnd.addEventListener(this.moveEndHandler);
                 }
                 else {
