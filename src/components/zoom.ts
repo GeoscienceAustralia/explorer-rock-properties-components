@@ -83,7 +83,8 @@ module rpComponents.zoom {
             // changed indexes or exceed threshold for pan, trigger recluster
             if((this.previousPosition.height > -1 && this.getIndex(this.previousPosition.height) != this.nextIndex) || 
                (Math.abs(this.nextPosition.latitude - this.previousPosition.latitude) > 0.01 / this.nextIndex ||
-                Math.abs(this.nextPosition.longitude - this.previousPosition.longitude) > 0.01 / this.nextIndex)
+                Math.abs(this.nextPosition.longitude - this.previousPosition.longitude) > 0.01 / this.nextIndex) ||
+                this.nextIndex == 16
             ) {
                 this.$rootScope.$broadcast('rocks.clusters.update', this.nextIndex);
             }
