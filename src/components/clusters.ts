@@ -177,7 +177,7 @@ module rpComponents.clusterService {
 
                         var clusterProps: any = this.computeClusterAttributes(clusters[i].properties.count);
                         clusterInstances.push(this.buildClusterInstance(clusters[i], clusterProps));
-                        //labelCollection.add(this.buildLabel(clusters[i], clusterProps)); // No lables for the short term
+                        labelCollection.add(this.buildLabel(clusters[i], clusterProps)); // No lables for the short term
                     }
 
                     this.drawClusters(clusterInstances, labelCollection);
@@ -232,13 +232,13 @@ module rpComponents.clusterService {
                 position : Cesium.Cartesian3.fromDegrees(
                     cluster.geometry.coordinates[0],
                     cluster.geometry.coordinates[1],
-                    clusterProps.extrudeHeight * 1.1 + clusterProps.radius
+                    clusterProps.extrudeHeight / 2.5 + clusterProps.radius + 30
                 ),
                 text: cluster.properties.count.toString(),
                 fillColor: Cesium.Color.BLACK,
                 outlineColor: Cesium.Color.RED,
                 // TODO review labelling
-                font: (30 - (this.zoomLevelService.nextIndex * 0.2)) +'px arial, sans-serif',
+                font: (26 - (this.zoomLevelService.nextIndex * 0.2)) +'px arial, sans-serif',
                 horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                 id: cluster
             };
