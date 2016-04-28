@@ -32,7 +32,7 @@
 	"screenshots"
   ],
   "dependencies": {
-    "cesiumjs": "1.19.x",
+    "cesiumjs": "1.20.x",
     "jszip": "~2.5.0",
     "file-saver.js": "~1.20150507.2",
     "d3": "~3.5.10"
