@@ -1,4 +1,33 @@
 /// <reference path="../../typings/browser.d.ts" />
+var rpComponents;
+(function (rpComponents) {
+    var config;
+    (function (config_1) {
+        'use strict';
+        var RocksConfigService = (function () {
+            function RocksConfigService($rootScope) {
+                this.$rootScope = $rootScope;
+            }
+            RocksConfigService.prototype.setConfig = function (config, map) {
+                this.config = config;
+                this.map = map;
+                this.$rootScope.$broadcast("rocks.config.ready");
+            };
+            RocksConfigService.$inject = [
+                "$rootScope"
+            ];
+            return RocksConfigService;
+        }());
+        config_1.RocksConfigService = RocksConfigService;
+        angular
+            .module('explorer.rockproperties.config', [])
+            .factory("rocksConfigService", ["$rootScope",
+            function ($rootScope) {
+                return new rpComponents.config.RocksConfigService($rootScope);
+            }]);
+    })(config = rpComponents.config || (rpComponents.config = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/browser.d.ts" />
 /// <reference path="../leaflet/clusters" />
 var rpComponents;
 (function (rpComponents) {
@@ -168,7 +197,853 @@ var rpComponents;
     })(spinnerService = rpComponents.spinnerService || (rpComponents.spinnerService = {}));
 })(rpComponents || (rpComponents = {}));
 /// <reference path="../../typings/browser.d.ts" />
+/**
+ *
+ * Geoserver Utils, e.g. get list of layers names from web map service.
+ *
+ */
+var rpComponents;
+(function (rpComponents) {
+    var gwsUtilService;
+    (function (gwsUtilService) {
+        'use strict';
+        var GwsUtilService = (function () {
+            function GwsUtilService($q, $http, rocksConfigService) {
+                this.$q = $q;
+                this.$http = $http;
+                this.rocksConfigService = rocksConfigService;
+            }
+            GwsUtilService.prototype.getWfsFeatureTypeNames = function () {
+                var _this = this;
+                var deferred = this.$q.defer();
+                this.$http.get(this.rocksConfigService.config.geoserverWfsUrl
+                    + '?request=GetCapabilities&service=wfs&version='
+                    + this.rocksConfigService.config.geoserverWfsVersion).
+                    success(function (data, status, headers, config) {
+                    var layerNames = _this.getFeatureTypeNamesFromWfsCapsJson(_this.xmlToJson($.parseXML(data)));
+                    deferred.resolve(layerNames);
+                }).
+                    error(function (err) {
+                    console.log("GetCapabilities request failed");
+                    console.log(err);
+                    deferred.error();
+                });
+                return deferred.promise;
+            };
+            GwsUtilService.prototype.getFeatureTypeNamesFromWfsCapsJson = function (data) {
+                var layerData = data["wfs:WFS_Capabilities"].FeatureTypeList.FeatureType;
+                var layers = [];
+                for (var i = 0; i < layerData.length; i++) {
+                    layers.push(layerData[i].Name["#text"]);
+                }
+                return layers;
+            };
+            GwsUtilService.prototype.getWmsLayerNames = function () {
+                var _this = this;
+                var deferred = this.$q.defer();
+                this.$http.get(this.rocksConfigService.config.geoserverWmsUrl
+                    + '?request=GetCapabilities&service=wms&version='
+                    + this.rocksConfigService.config.geoserverWmsVersion).
+                    success(function (data, status, headers, config) {
+                    _this.wmsLayerNames = _this.getLayerNamesFromWmsCapsJson(_this.xmlToJson($.parseXML(data)));
+                    deferred.resolve(_this.wmsLayerNames);
+                }).
+                    error(function (err) {
+                    console.log("GetCapabilities request failed");
+                    console.log(err);
+                    deferred.error();
+                });
+                return deferred.promise;
+            };
+            GwsUtilService.prototype.getLayerNamesFromWmsCapsJson = function (data) {
+                var layerData = data.WMS_Capabilities.Capability.Layer.Layer;
+                var layers = [];
+                for (var i = 0; i < layerData.length; i++) {
+                    layers.push(layerData[i].Name["#text"]);
+                }
+                return layers;
+            };
+            GwsUtilService.prototype.xmlToJson = function (xml) {
+                var obj = {};
+                if (xml.nodeType == 1) {
+                    // do attributes
+                    if (xml.attributes.length > 0) {
+                        obj["@attributes"] = {};
+                        for (var j = 0; j < xml.attributes.length; j++) {
+                            var attribute = xml.attributes.item(j);
+                            obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
+                        }
+                    }
+                }
+                else if (xml.nodeType == 3) {
+                    obj = xml.nodeValue;
+                }
+                // do children
+                if (xml.hasChildNodes()) {
+                    for (var i = 0; i < xml.childNodes.length; i++) {
+                        var item = xml.childNodes.item(i);
+                        var nodeName = item.nodeName;
+                        if (typeof (obj[nodeName]) == "undefined") {
+                            obj[nodeName] = this.xmlToJson(item);
+                        }
+                        else {
+                            if (typeof (obj[nodeName].push) == "undefined") {
+                                var old = obj[nodeName];
+                                obj[nodeName] = [];
+                                obj[nodeName].push(old);
+                            }
+                            obj[nodeName].push(this.xmlToJson(item));
+                        }
+                    }
+                }
+                return obj;
+            };
+            GwsUtilService.$inject = [
+                "$q",
+                "$http",
+                "rocksConfigService"
+            ];
+            return GwsUtilService;
+        }());
+        gwsUtilService.GwsUtilService = GwsUtilService;
+        angular
+            .module('explorer.rockproperties.gwsutil', [])
+            .factory("gwsUtilService", ["$q", "$http", "rocksConfigService",
+            function ($q, $http, rocksConfigService) {
+                return new rpComponents.gwsUtilService.GwsUtilService($q, $http, rocksConfigService);
+            }]);
+    })(gwsUtilService = rpComponents.gwsUtilService || (rpComponents.gwsUtilService = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="clipship" />
+/// <reference path="config" />
+/// <reference path="spinner" />
+/// <reference path="gws-util" />
+var rpComponents;
+(function (rpComponents) {
+    var queryBuilderExport;
+    (function (queryBuilderExport) {
+        'use strict';
+        var QueryBuilder = (function () {
+            function QueryBuilder($q, $http, $rootScope, loadingSpinnerService, rocksClipShipService, rocksConfigService, gwsUtilService) {
+                var _this = this;
+                this.$q = $q;
+                this.$http = $http;
+                this.$rootScope = $rootScope;
+                this.loadingSpinnerService = loadingSpinnerService;
+                this.rocksClipShipService = rocksClipShipService;
+                this.rocksConfigService = rocksConfigService;
+                this.gwsUtilService = gwsUtilService;
+                this.propertyQuery = "";
+                this.$inject = [
+                    "$q",
+                    "$http",
+                    "$rootScope",
+                    "loadingSpinnerService",
+                    "rocksClipShipService",
+                    "rocksConfigService",
+                    "gwsUtilService"
+                ];
+                this.$rootScope.$on("rocks.config.ready", function () {
+                    // build base query URL from config
+                    _this.baseUrl = _this.rocksConfigService.config.geoserverWfsUrl + "?";
+                    angular.forEach(_this.rocksConfigService.config.geoserverWfsExportParams, function (value, key) {
+                        _this.baseUrl += key + "=" + value + "&";
+                    });
+                    // lose trailing &
+                    _this.baseUrl = _this.baseUrl.slice(0, -1);
+                    // get WFS layer names
+                    _this.gwsUtilService.getWfsFeatureTypeNames().then(function (layerNames) {
+                        _this.wfsLayerNames = layerNames;
+                    });
+                });
+            }
+            QueryBuilder.prototype.startClipShip = function (features, format, extent) {
+                var _this = this;
+                // TODO fire flasher event for UI?
+                this.loading = true;
+                // init spinner
+                if (!this.loadingSpinner) {
+                    this.loadingSpinner = this.loadingSpinnerService.addSpinner({
+                        width: 80,
+                        height: 80,
+                        container: "#rock-clip-ship-loading",
+                        id: "clip-ship-spinner"
+                    });
+                    this.loadingSpinner();
+                }
+                var targetFeatures = [];
+                for (var i = 0; i < features.length; i++) {
+                    if (features[i].isSelected)
+                        targetFeatures.push(features[i].name);
+                }
+                if (format === "csv") {
+                    var zip = new JSZip();
+                    // give zip file to decent browsers
+                    if (JSZip.support.blob) {
+                        var promises = [];
+                        // create a Get query for each layer
+                        for (var i = 0; i < this.wfsLayerNames.length; i++) {
+                            var query = this.buildQuery(targetFeatures, extent, format, [this.wfsLayerNames[i]]);
+                            var promise = this.$http.get(query);
+                            promises.push(promise);
+                        }
+                        this.$q.all(promises).then(function (results) {
+                            for (var i = 0; i < results.length; i++) {
+                                // we'll assume that if there's more than one line we've got data to write
+                                var numberOfLineBreaks = (results[i]['data'].match(/\n/g) || []).length;
+                                if (numberOfLineBreaks > 1) {
+                                    var filename = _this.wfsLayerNames[i].split(' ').join('-');
+                                    zip.file(filename + ".csv", results[i]['data'] + "\n");
+                                }
+                            }
+                            // FileSaver.js
+                            var content = zip.generate({ type: "blob" });
+                            saveAs(content, "rocks-export.zip");
+                            _this.loading = false;
+                            _this.rocksClipShipService.step = 'startDraw';
+                        });
+                    }
+                    else {
+                        // just give separate file for each layer
+                        for (var i = 0; i < this.wfsLayerNames.length; i++) {
+                            window.open(this.buildQuery(targetFeatures, extent, format, [this.wfsLayerNames[i]]));
+                        }
+                        this.loading = false;
+                    }
+                }
+                else {
+                    // give the user the query url directly
+                    this.exportUrl = this.buildQuery(targetFeatures, extent, format, this.wfsLayerNames);
+                    this.loading = false;
+                }
+            };
+            QueryBuilder.prototype.buildQuery = function (properties, extent, format, layerNames) {
+                var typeNamesQuery = this.getTypeNamesQuery(layerNames);
+                // BBOX and FILTER queries are mutually exclusive, so must use CQL
+                var bboxQuery = "&CQL_FILTER=BBOX(GEOM," + extent.west + "," + extent.south + "," + extent.east + "," + extent.north + ")";
+                var filterQuery = "";
+                var filters = {}; // filterState.filters;
+                var exportFormat = "&outputFormat=" + format;
+                var query;
+                var hasFilters = !isEmpty(filters);
+                var filtersHasProperty = filters.hasOwnProperty("PROPERTY");
+                var onlyHasPropertyFilter = (filtersHasProperty && (Object.keys(filters).length === 1)) ? true : false;
+                function isEmpty(obj) {
+                    for (var prop in obj) {
+                        if (obj.hasOwnProperty(prop))
+                            return false;
+                    }
+                    return true;
+                }
+                // single feature/layer query with filters
+                if (hasFilters && filtersHasProperty) {
+                    this.propertyQuery = "%20AND%20PROPERTY='" + filters['PROPERTY'] + "'";
+                    if (!onlyHasPropertyFilter) {
+                        filterQuery = this.getFilters(filters);
+                    }
+                }
+                else if (hasFilters) {
+                    this.propertyQuery = this.getPropertyQuery(properties);
+                    if (!onlyHasPropertyFilter) {
+                        filterQuery = this.getFilters(filters);
+                    }
+                }
+                else {
+                    this.propertyQuery = this.getPropertyQuery(properties);
+                }
+                ga('send', 'event', 'explorer-rock-properties', 'click', 'clipship data export: ' + format);
+                query = this.baseUrl + typeNamesQuery + exportFormat + bboxQuery + filterQuery + this.propertyQuery;
+                return query;
+            };
+            // create filter query for each of the selected attribute values
+            // don't include PROPERTY here as we want to apply OR logic
+            QueryBuilder.prototype.getFilters = function (filters) {
+                var filterString = "%20AND%20";
+                // create filters string
+                for (var property in filters) {
+                    if (property !== "PROPERTY") {
+                        filterString = filterString.concat(property + "='" + filters[property] + "'%20AND%20");
+                    }
+                }
+                // trim tailing AND
+                filterString = filterString.substring(0, filterString.length - 9);
+                return filterString;
+            };
+            // build CQL query for properties
+            QueryBuilder.prototype.getPropertyQuery = function (properties) {
+                var query = "%20AND%20(";
+                for (var i = 0; i < properties.length; i++) {
+                    query = query.concat("PROPERTY='" + properties[i] + "'%20OR%20");
+                }
+                // trim trailing OR, close bracket
+                query = query.substring(0, query.length - 8);
+                query = query.concat(")");
+                return query;
+            };
+            QueryBuilder.prototype.getTypeNamesQuery = function (layers) {
+                var query = "&typeName=";
+                for (var i = 0; i < layers.length; i++) {
+                    query = query.concat(layers[i] + ",");
+                }
+                query = query.substring(0, query.length - 1);
+                return query;
+            };
+            return QueryBuilder;
+        }());
+        queryBuilderExport.QueryBuilder = QueryBuilder;
+        angular
+            .module('explorer.rockproperties.queryexport', [])
+            .factory("rocksQueryBuilderExport", [
+            "$q",
+            "$http",
+            "$rootScope",
+            "loadingSpinnerService",
+            "rocksClipShipService",
+            "rocksConfigService",
+            "gwsUtilService",
+            function ($q, $http, $rootScope, loadingSpinnerService, rocksClipShipService, rocksConfigService, gwsUtilService) {
+                return new rpComponents.queryBuilderExport.QueryBuilder($q, $http, $rootScope, loadingSpinnerService, rocksClipShipService, rocksConfigService, gwsUtilService);
+            }]);
+    })(queryBuilderExport = rpComponents.queryBuilderExport || (rpComponents.queryBuilderExport = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="query-builder-export" />
+/// <reference path="cluster-filters" />
 /// <reference path="control-panel" />
+var rpComponents;
+(function (rpComponents) {
+    var clipShipService;
+    (function (clipShipService) {
+        'use strict';
+        var RocksClipShipCtrl = (function () {
+            function RocksClipShipCtrl($scope, $timeout, rocksClipShipService, rocksPanelService, rocksFiltersService, rocksQueryBuilderExport) {
+                this.$scope = $scope;
+                this.$timeout = $timeout;
+                this.rocksClipShipService = rocksClipShipService;
+                this.rocksPanelService = rocksPanelService;
+                this.rocksFiltersService = rocksFiltersService;
+                this.rocksQueryBuilderExport = rocksQueryBuilderExport;
+            }
+            RocksClipShipCtrl.prototype.startClipShip = function () {
+                var _this = this;
+                this.$timeout(function () {
+                    _this.rocksClipShipService.step = 'download';
+                    _this.rocksQueryBuilderExport.startClipShip(_this.rocksFiltersService.exportProperties.filterOptions, _this.rocksClipShipService.targetFormat, _this.rocksClipShipService.targetExtent);
+                });
+            };
+            RocksClipShipCtrl.$inject = [
+                "$scope",
+                "$timeout",
+                "rocksClipShipService",
+                "rocksPanelService",
+                "rocksFiltersService",
+                "rocksQueryBuilderExport"
+            ];
+            return RocksClipShipCtrl;
+        }());
+        clipShipService.RocksClipShipCtrl = RocksClipShipCtrl;
+        var RocksClipShipService = (function () {
+            function RocksClipShipService($rootScope, rocksFiltersService, rocksConfigService) {
+                var _this = this;
+                this.$rootScope = $rootScope;
+                this.rocksFiltersService = rocksFiltersService;
+                this.rocksConfigService = rocksConfigService;
+                this.step = "startDraw";
+                this.isDrawing = false;
+                this.$inject = [
+                    "$rootScope",
+                    "rocksFiltersService",
+                    "rocksConfigService"
+                ];
+                this.$rootScope.$on("rocks.config.ready", function () {
+                    _this.exportFormats = _this.rocksConfigService.config.geoserverWfsExportFormats;
+                });
+                this.$rootScope.$on("rocks.extent.ready", function (event, data) {
+                    _this.step = "selectFeatures";
+                    _this.targetExtent = data;
+                });
+            }
+            /**
+             * broadcast event to trigger draw, and return extent
+             */
+            RocksClipShipService.prototype.startDraw = function () {
+                this.isDrawing = true;
+                this.$rootScope.$broadcast("draw.extent.start", "rocks.extent.ready");
+            };
+            RocksClipShipService.prototype.openGeoserver = function () {
+                var win = window.open(this.rocksConfigService.config.geoserverDashboardUrl, '_blank');
+                if (win) {
+                    win.focus();
+                }
+            };
+            RocksClipShipService.prototype.updateExportFormat = function (format) {
+                this.targetFormat = format;
+            };
+            return RocksClipShipService;
+        }());
+        clipShipService.RocksClipShipService = RocksClipShipService;
+        angular
+            .module('explorer.rockproperties.clipship', [])
+            .factory("rocksClipShipService", ["$rootScope", "rocksFiltersService", "rocksConfigService",
+            function ($rootScope, rocksFiltersService, rocksConfigService) {
+                return new rpComponents.clipShipService.RocksClipShipService($rootScope, rocksFiltersService, rocksConfigService);
+            }
+        ])
+            .controller("rocksClipShipCtrl", RocksClipShipCtrl)
+            .directive("rocksClipShip", function () {
+            return {
+                templateUrl: 'rockprops/clip-ship.html',
+                controller: RocksClipShipCtrl,
+                controllerAs: 'rocksClipShipVM'
+            };
+        })
+            .filter('noClipSelected', [function ($filter) {
+                return function (features) {
+                    if (!features)
+                        return;
+                    for (var i = 0; i < features.length; i++) {
+                        if (features[i].isSelected)
+                            return false;
+                    }
+                    return true;
+                };
+            }]);
+    })(clipShipService = rpComponents.clipShipService || (rpComponents.clipShipService = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="../components/spinner" />
+/// <reference path="../components/clipship" />
+var rpComponents;
+(function (rpComponents) {
+    var wmsInspectorService;
+    (function (wmsInspectorService_1) {
+        'use strict';
+        var WmsInspectorCtrl = (function () {
+            function WmsInspectorCtrl($scope, wmsInspectorState, wmsInspectorService) {
+                this.$scope = $scope;
+                this.wmsInspectorState = wmsInspectorState;
+                this.wmsInspectorService = wmsInspectorService;
+            }
+            WmsInspectorCtrl.$inject = ["$scope", "wmsInspectorState", "wmsInspectorService"];
+            return WmsInspectorCtrl;
+        }());
+        wmsInspectorService_1.WmsInspectorCtrl = WmsInspectorCtrl;
+        var WmsInspectorService = (function () {
+            function WmsInspectorService($rootScope, $http, wmsInspectorState, assetsService, configService, rocksConfigService, loadingSpinnerService, gwsUtilService, rocksClipShipService) {
+                var _this = this;
+                this.$rootScope = $rootScope;
+                this.$http = $http;
+                this.wmsInspectorState = wmsInspectorState;
+                this.assetsService = assetsService;
+                this.configService = configService;
+                this.rocksConfigService = rocksConfigService;
+                this.loadingSpinnerService = loadingSpinnerService;
+                this.gwsUtilService = gwsUtilService;
+                this.rocksClipShipService = rocksClipShipService;
+                this.isLoading = false;
+                this.URL_EXCLUDE = "?SERVICE=WMS&";
+                this.SURFACE_GEO = "GA_Surface_Geology_of_Australia";
+                this.$inject = [
+                    "$rootScope",
+                    "$http",
+                    "wmsInspectorState",
+                    "assetsService",
+                    "configService",
+                    "rocksConfigService",
+                    "loadingSpinnerService",
+                    "gwsUtilService",
+                    "rocksClipShipService"
+                ];
+                // register listener for pointInspector
+                this.$rootScope.$on("viewer.click.left", function (event, data) {
+                    data.degrees = {
+                        lat: data.cartographic.latitude,
+                        lon: data.cartographic.longitude
+                    };
+                    // TODO should flasher for this so user knows why
+                    // (we don't want inspector interuppting clipship drawing)
+                    if (_this.rocksClipShipService.isDrawing) {
+                        return;
+                    }
+                    if (_this.inspectorEnabled && data.hasOwnProperty('cartographic')) {
+                        // make sure panel is visible
+                        _this.$rootScope.$broadcast("rocks.accordion.update", "wmsInspector");
+                        _this.$rootScope.$broadcast("toolbar.toggle.update", { linked: false, key: "rocksClusters", isActive: true });
+                        _this.wmsInspectorState.targetGeom = data;
+                        _this.wmsInspectorState.view = "LAYERSELECT";
+                        _this.wmsInspectorState.cameraHeight = 0;
+                    }
+                });
+                this.$rootScope.$on('rocks.config.ready', function () {
+                    // load feature classes
+                    assetsService.getReferenceFeatureClasses().then(function (features) {
+                        _this.features = features;
+                    });
+                    // init rocks feature
+                    _this.rocksFeature = {
+                        wmsUrl: _this.rocksConfigService.config.geoserverWmsUrl,
+                        name: 'Rock Properties Layer'
+                    };
+                });
+            }
+            WmsInspectorService.prototype.togglePointInspector = function () {
+                this.inspectorEnabled != this.inspectorEnabled;
+            };
+            // TODO we should restrict the query to visible layers
+            WmsInspectorService.prototype.queryRocks = function () {
+                if (!this.rocksFeature.hasOwnProperty('layers') && this.gwsUtilService.wmsLayerNames) {
+                    this.rocksFeature.layers = [];
+                    for (var i = 0; i < this.gwsUtilService.wmsLayerNames.length; i++) {
+                        this.rocksFeature.layers.push(this.rocksConfigService.config.geoserverWmsLayerPrefix +
+                            this.gwsUtilService.wmsLayerNames[i]);
+                    }
+                }
+                this.queryFeature(this.rocksFeature);
+            };
+            WmsInspectorService.prototype.queryFeature = function (feature) {
+                var _this = this;
+                ga('send', 'event', 'explorer-rock-properties', 'click', 'wms inspector query: ' + feature.name);
+                // set view
+                this.wmsInspectorState.view = "FEATUREINFO";
+                this.toggleLoading();
+                var targetUrl = feature.wmsUrl;
+                var targetLayers = feature.layers;
+                // clean any endpoints already containing '?'
+                if (targetUrl.indexOf(this.URL_EXCLUDE) > -1) {
+                    targetUrl = targetUrl.substring(0, (targetUrl.length - this.URL_EXCLUDE.length));
+                }
+                // surface geology has scale dependencies, so we need to check
+                // zoom (aka camera height) to ensure we query the correct layer
+                if (targetUrl.indexOf(this.SURFACE_GEO) > -1) {
+                    if (this.wmsInspectorState.cameraHeight <= 340000) {
+                        targetLayers = [targetLayers[0]];
+                    }
+                    else {
+                        targetLayers = [targetLayers[1]];
+                    }
+                }
+                var queryString = '?SERVICE=WMS' +
+                    '&REQUEST=GetFeatureInfo' +
+                    '&VERSION=1.1.1' +
+                    '&LAYERS=' + targetLayers +
+                    '&STYLES=' +
+                    '&SRS=EPSG%3A4326' +
+                    '&FORMAT=image%2Fpng' +
+                    // we use the click pos as the bottom left corner
+                    // and offset the top right by ~30 meters
+                    // (can be hard to click on a point if res is too fine)
+                    '&BBOX=' +
+                    (this.wmsInspectorState.targetGeom.degrees.lon) + ',' +
+                    (this.wmsInspectorState.targetGeom.degrees.lat) + ',' +
+                    (this.wmsInspectorState.targetGeom.degrees.lon + 0.003) + ',' +
+                    (this.wmsInspectorState.targetGeom.degrees.lat + 0.003) +
+                    '&QUERY_LAYERS=' + targetLayers +
+                    '&INFO_FORMAT=text%2Fhtml' +
+                    '&FEATURE_COUNT=100' +
+                    '&WIDTH=2' +
+                    '&HEIGHT=2' +
+                    '&X=1' +
+                    '&Y=1' +
+                    '&TRANSPARENT=true' +
+                    '&EXCEPTIONS=application%2Fvnd.ogc.se_xml';
+                // send the query
+                this.$http.get(targetUrl + queryString).success(function (data) {
+                    _this.featureInfo = data;
+                    _this.toggleLoading();
+                })
+                    .error(function (data, status, headers, config) {
+                    console.log("Couldn't load WMS GetFeatureInfo");
+                    this.featureInfo = "<h5>Couldn't load WMS GetFeatureInfo for this layer.</h5><p>You may not be able to access this function for some layers.</p>";
+                    this.toggleLoading();
+                });
+            };
+            WmsInspectorService.prototype.toggleLoading = function () {
+                if (this.loadingSpinner) {
+                    this.isLoading = !this.isLoading;
+                }
+                else {
+                    this.loadingSpinner = this.loadingSpinnerService.addSpinner({
+                        width: 60,
+                        height: 60,
+                        container: "#rocks-inspector-loading",
+                        id: "rocks-inspector-spinner"
+                    });
+                    this.loadingSpinner();
+                    this.isLoading = true;
+                }
+            };
+            return WmsInspectorService;
+        }());
+        wmsInspectorService_1.WmsInspectorService = WmsInspectorService;
+        angular
+            .module('explorer.rockproperties.inspector', [])
+            .factory("wmsInspectorService", [
+            "$rootScope",
+            "$http",
+            "wmsInspectorState",
+            "assetsService",
+            "configService",
+            "rocksConfigService",
+            "loadingSpinnerService",
+            "gwsUtilService",
+            "rocksClipShipService",
+            function ($rootScope, $http, wmsInspectorState, assetsService, configService, rocksConfigService, loadingSpinnerService, gwsUtilService, rocksClipShipService) {
+                return new rpComponents.wmsInspectorService.WmsInspectorService($rootScope, $http, wmsInspectorState, assetsService, configService, rocksConfigService, loadingSpinnerService, gwsUtilService, rocksClipShipService);
+            }])
+            .controller("wmsInspectorCtrl", rpComponents.wmsInspectorService.WmsInspectorCtrl)
+            .directive("wmsInspectorPanel", function () {
+            return {
+                templateUrl: 'rockprops/wms-inspector-panel.html',
+                controller: WmsInspectorCtrl,
+                controllerAs: 'wmsInspectorVM'
+            };
+        });
+    })(wmsInspectorService = rpComponents.wmsInspectorService || (rpComponents.wmsInspectorService = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/browser.d.ts" />
+var rpComponents;
+(function (rpComponents) {
+    var wmsInspectorState;
+    (function (wmsInspectorState) {
+        'use strict';
+        /*
+            The WMS inspector panel can be in 1 of 3 view states:
+            1. INTRO - the default/home shows prompt
+            2. LAYERSELECT - user presented with layers to interrogate with GetFeatureInfo when
+            they have clicked a point on the map
+            3. FEATUREINFO - view to present raw html returned by GetFeatureInfo
+         */
+        var WmsInspectorState = (function () {
+            function WmsInspectorState() {
+                this.view = "INTRO";
+            }
+            return WmsInspectorState;
+        }());
+        wmsInspectorState.WmsInspectorState = WmsInspectorState;
+        angular
+            .module('explorer.rockproperties.inspectorstate', [])
+            .factory("wmsInspectorState", [function () { return new rpComponents.wmsInspectorState.WmsInspectorState(); }]);
+    })(wmsInspectorState = rpComponents.wmsInspectorState || (rpComponents.wmsInspectorState = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="config" />
+/// <reference path="../components/control-panel" />
+/// <reference path="../leaflet/wms-inspector" />
+/// <reference path="../leaflet/wms-inspector-state" />
+/// <reference path="gws-util" />
+var rpComponents;
+(function (rpComponents) {
+    var pointsService;
+    (function (pointsService) {
+        'use strict';
+        var RocksWmsPointsCtrl = (function () {
+            function RocksWmsPointsCtrl($scope, wmsPointsService, rocksPanelService, wmsInspectorState) {
+                this.$scope = $scope;
+                this.wmsPointsService = wmsPointsService;
+                this.rocksPanelService = rocksPanelService;
+                this.wmsInspectorState = wmsInspectorState;
+            }
+            RocksWmsPointsCtrl.$inject = ["$scope", "wmsPointsService", "rocksPanelService", "wmsInspectorState"];
+            return RocksWmsPointsCtrl;
+        }());
+        pointsService.RocksWmsPointsCtrl = RocksWmsPointsCtrl;
+        var WmsPointsService = (function () {
+            function WmsPointsService($rootScope, gwsUtilService, rocksConfigService, wmsInspectorState) {
+                var _this = this;
+                this.$rootScope = $rootScope;
+                this.gwsUtilService = gwsUtilService;
+                this.rocksConfigService = rocksConfigService;
+                this.wmsInspectorState = wmsInspectorState;
+                this.inspectorEnabled = true;
+                this.masterChecked = true;
+                this.legendParamString = "";
+                this.$inject = [
+                    "$rootScope",
+                    "gwsUtilService",
+                    "rocksConfigService",
+                    "wmsInspectorState"
+                ];
+                this.$rootScope.$on('rocks.config.ready', function () {
+                    _this.init();
+                });
+            }
+            WmsPointsService.prototype.init = function () {
+                var _this = this;
+                this.wmsServiceUrl = this.rocksConfigService.config.geoserverWmsUrl;
+                this.map = this.rocksConfigService.map;
+                this.restrictedBounds = [109, -45, 158, -8];
+                // build our legend param string from config
+                this.legendParamString = "?";
+                angular.forEach(this.rocksConfigService.config.geoserverWmsLegendParams, function (value, key) {
+                    _this.legendParamString += key + "=" + value + "&";
+                });
+                // lose trailing &
+                this.legendParamString = this.legendParamString.slice(0, -1) + "&LAYER=";
+                this.gwsUtilService.getWmsLayerNames().then(function (layers) {
+                    _this.layers = layers;
+                    _this.getLegendData();
+                });
+            };
+            WmsPointsService.prototype.togglePoints = function () {
+                this.pointsVisible = !this.pointsVisible;
+                if (this.wmsLayer) {
+                    this.wmsLayer.show = this.pointsVisible;
+                }
+                else {
+                    this.updatePointsLayer();
+                }
+                return this.pointsVisible;
+            };
+            WmsPointsService.prototype.toggleChecked = function () {
+                this.masterChecked != this.masterChecked;
+                for (var legend in this.legendData) {
+                    this.legendData[legend]['isSelected'] = this.masterChecked;
+                }
+            };
+            WmsPointsService.prototype.getLegendData = function () {
+                this.legendData = {};
+                for (var i = 0; i < this.layers.length; i++) {
+                    this.legendData[this.layers[i]] = {
+                        legendUrl: this.wmsServiceUrl + this.legendParamString + this.layers[i],
+                        isSelected: true
+                    };
+                }
+            };
+            WmsPointsService.prototype.updatePointsLayer = function () {
+                var targetLayers = [];
+                for (var legend in this.legendData) {
+                    if (this.legendData.hasOwnProperty(legend) && this.legendData[legend]['isSelected'] === true) {
+                        targetLayers.push(legend);
+                    }
+                }
+                if (this.wmsLayer) {
+                    this.map.remove(this.wmsLayer);
+                }
+                ga('send', 'event', 'explorer-rock-properties', 'click', 'update wms points layer: ' + targetLayers.toString());
+                this.wmsLayer = L.tileLayer.wms(this.wmsServiceUrl, {
+                    layers: targetLayers.toString(),
+                    transparent: true,
+                    format: 'image/png'
+                });
+                this.map.addLayer(this.wmsLayer);
+                /*            this.wmsLayer = this.viewer.imageryLayers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
+                                url : this.wmsServiceUrl,
+                                layers: targetLayers.toString(),
+                                rectangle: this.restrictedBounds,
+                                parameters : {
+                                    transparent : 'true',
+                                    format : 'image/png'
+                                },
+                                enablePickFeatures: false
+                            }));
+                            this.wmsLayer.alpha = 0.7;
+                */
+            };
+            return WmsPointsService;
+        }());
+        pointsService.WmsPointsService = WmsPointsService;
+        angular
+            .module('explorer.rockproperties.wmspoints', [])
+            .factory("wmsPointsService", ["$rootScope", "gwsUtilService", "rocksConfigService", "wmsInspectorState",
+            function ($rootScope, gwsUtilService, rocksConfigService, wmsInspectorState) {
+                return new rpComponents.pointsService.WmsPointsService($rootScope, gwsUtilService, rocksConfigService, wmsInspectorState);
+            }])
+            .controller("rocksWmsPointsCtrl", RocksWmsPointsCtrl)
+            .directive("rocksWmsPointsLegend", function () {
+            return {
+                templateUrl: 'rockprops/wms-points-panel.html',
+                controller: RocksWmsPointsCtrl,
+                controllerAs: 'rocksWmsPointsVM'
+            };
+        });
+    })(pointsService = rpComponents.pointsService || (rpComponents.pointsService = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="../leaflet/clusters" />
+/// <reference path="../leaflet/wms-inspector" />
+/// <reference path="wms-points" />
+var rpComponents;
+(function (rpComponents) {
+    var controlPanel;
+    (function (controlPanel) {
+        'use strict';
+        var RocksPanelCtrl = (function () {
+            function RocksPanelCtrl($scope, rocksPanelService, wmsInspectorService) {
+                var _this = this;
+                this.$scope = $scope;
+                this.rocksPanelService = rocksPanelService;
+                this.wmsInspectorService = wmsInspectorService;
+                this.targetPanel = '';
+                this.$scope.$on("rocks.accordion.update", function (event, data) {
+                    _this.targetPanel = data;
+                });
+            }
+            RocksPanelCtrl.prototype.setTargetPanel = function (targetPanel) {
+                this.targetPanel = (this.targetPanel != targetPanel) ? targetPanel : "";
+            };
+            RocksPanelCtrl.$inject = ["$scope", "rocksPanelService", "wmsInspectorService"];
+            return RocksPanelCtrl;
+        }());
+        controlPanel.RocksPanelCtrl = RocksPanelCtrl;
+        var RocksPanelService = (function () {
+            function RocksPanelService($rootScope, clusterService, wmsPointsService, rocksConfigService) {
+                this.$rootScope = $rootScope;
+                this.clusterService = clusterService;
+                this.wmsPointsService = wmsPointsService;
+                this.rocksConfigService = rocksConfigService;
+                this.clustersEnabled = false;
+                this.pointsEnabled = false;
+            }
+            /**
+             *
+             * The entry point for the component.
+             *
+             * @param map
+             * @param clusterServiceUrl
+             * @param wmsServiceUrl
+             * @param pickEnabled
+             */
+            RocksPanelService.prototype.init = function (map, config) {
+                this.map = map;
+                this.rocksConfigService.setConfig(config, map);
+            };
+            RocksPanelService.prototype.toggleClusters = function () {
+                this.clustersEnabled = this.clusterService.toggleClusters();
+            };
+            RocksPanelService.prototype.togglePoints = function () {
+                this.pointsEnabled = this.wmsPointsService.togglePoints();
+            };
+            RocksPanelService.$inject = [
+                "$rootScope",
+                "clusterService",
+                "wmsPointsService",
+                "rocksConfigService"
+            ];
+            return RocksPanelService;
+        }());
+        controlPanel.RocksPanelService = RocksPanelService;
+        angular
+            .module('explorer.rockproperties.controlpanel', [])
+            .factory("rocksPanelService", [
+            "$rootScope", "clusterService", "wmsPointsService", "rocksConfigService",
+            function ($rootScope, clusterService, wmsPointsService, rocksConfigService) {
+                return new rpComponents.controlPanel.RocksPanelService($rootScope, clusterService, wmsPointsService, rocksConfigService);
+            }
+        ])
+            .controller("rocksPanelCtrl", RocksPanelCtrl)
+            .directive("rocksControlPanel", function () {
+            return {
+                templateUrl: 'rockprops/control-panel.html',
+                controller: RocksPanelCtrl,
+                controllerAs: 'controlPanelVM'
+            };
+        });
+    })(controlPanel = rpComponents.controlPanel || (rpComponents.controlPanel = {}));
+})(rpComponents || (rpComponents = {}));
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="../components/control-panel" />
+/// <reference path="../components/charts" />
 var rpComponents;
 (function (rpComponents) {
     var clusterInspector;
@@ -217,34 +1092,15 @@ var rpComponents;
             /**
              *
              
-             * @param viewer
+             * @param map
              * @param summaryService
              * @param usePicking
              */
             ClusterInspectorService.prototype.init = function () {
-                var _this = this;
-                this.viewer = this.rocksConfigService.viewer;
+                this.map = this.rocksConfigService.map;
                 this.serviceUrl = this.rocksConfigService.config.rocksServiceUrl;
                 // setup our pick handler
                 if (this.rocksConfigService.config.useClusterPicking) {
-                    this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
-                    this.pickHandlerAction = function (movement) {
-                        var pick = _this.viewer.scene.pick(movement.position);
-                        if (Cesium.defined(pick) && Cesium.defined(pick.id) && pick.id.hasOwnProperty('properties') && pick.id.properties.featureType == 'rockPropsCluster') {
-                            _this.listReady = false;
-                            _this.clearHighlighted();
-                            _this.targetId = pick.id;
-                            _this.setHighlighted(_this.targetId, true);
-                            _this.targetPos = Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.pickEllipsoid(movement.position));
-                            if (_this.inspectMode == "CHART") {
-                                _this.chartClusterQuery();
-                            }
-                            else {
-                                _this.listIndex = 0;
-                                _this.listClusterQuery();
-                            }
-                        }
-                    };
                 }
             };
             /**
@@ -269,8 +1125,8 @@ var rpComponents;
                     this.summarySpinner();
                 }
                 var args = '?zoom=' + this.zoomLevelService.nextIndex +
-                    '&x=' + Cesium.Math.toDegrees(this.targetPos.longitude) +
-                    '&y=' + Cesium.Math.toDegrees(this.targetPos.latitude) +
+                    '&x=' + this.targetPos.longitude +
+                    '&y=' + this.targetPos.latitude +
                     this.clusterFilterState.filterQuery;
                 var query = this.serviceUrl + 'query' + args;
                 console.log("query");
@@ -309,8 +1165,8 @@ var rpComponents;
                 var args = '?zoom=' + this.zoomLevelService.nextIndex +
                     '&maxCount=' + this.maxListStep +
                     '&startIndex=' + this.listIndex +
-                    '&x=' + Cesium.Math.toDegrees(this.targetPos.longitude) +
-                    '&y=' + Cesium.Math.toDegrees(this.targetPos.latitude) +
+                    '&x=' + this.targetPos.longitude +
+                    '&y=' + this.targetPos.latitude +
                     this.clusterFilterState.filterQuery;
                 var query = this.serviceUrl + 'features' + args;
                 console.log("features query");
@@ -342,10 +1198,8 @@ var rpComponents;
             };
             ClusterInspectorService.prototype.setPickEnabled = function (enabled) {
                 if (enabled) {
-                    this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
                 }
                 else {
-                    this.pickHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
                 }
             };
             ClusterInspectorService.prototype.setClusterPrimitive = function (primitive) {
@@ -355,7 +1209,7 @@ var rpComponents;
                 var attributes = this.clusterPrimitive.getGeometryInstanceAttributes(id);
                 if (attributes && highlight) {
                     attributes.prevColor = attributes.color;
-                    attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#ff00ff').withAlpha(1));
+                    attributes.color = '#ff00ff';
                 }
             };
             ClusterInspectorService.prototype.clearHighlighted = function () {
@@ -446,7 +1300,7 @@ var rpComponents;
                     "north": -8
                 };
                 this.moveEndHandler = function () {
-                    _this.nextPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.position);
+                    _this.nextPosition = _this.map;
                     // changed indexes or exceed threshold for pan, trigger recluster
                     if ((_this.previousPosition.height > -1 && _this.getIndex(_this.previousPosition.height) != _this.nextIndex) ||
                         (Math.abs(_this.nextPosition.latitude - _this.previousPosition.latitude) > 0.01 / _this.nextIndex ||
@@ -454,11 +1308,11 @@ var rpComponents;
                         _this.nextIndex == 16) {
                         _this.$rootScope.$broadcast('rocks.clusters.update', _this.nextIndex);
                     }
-                    console.log("INDEX = " + _this.nextIndex + " HEIGHT = " + Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.viewer.camera.position).height);
+                    console.log("INDEX = " + _this.nextIndex);
                     _this.previousPosition = _this.nextPosition;
                 };
                 this.$rootScope.$on('rocks.config.ready', function () {
-                    _this.viewer = _this.rocksConfigService.viewer;
+                    _this.map = _this.rocksConfigService.map;
                 });
             }
             Object.defineProperty(ZoomLevelService.prototype, "nextIndex", {
@@ -484,14 +1338,7 @@ var rpComponents;
                 return this.zoomLevels.length - 1;
             };
             ZoomLevelService.prototype.setActive = function (active) {
-                if (active) {
-                    // TODO extent
-                    this.nextPosition = this.previousPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position);
-                    this.viewer.camera.moveEnd.addEventListener(this.moveEndHandler);
-                }
-                else {
-                    this.viewer.camera.moveEnd.removeEventListener(this.moveEndHandler);
-                }
+                console.log("setActive called");
             };
             /**
              *
@@ -502,30 +1349,7 @@ var rpComponents;
              * @returns {any}
              */
             ZoomLevelService.prototype.getViewExtent = function (offset) {
-                var ellipsoid = Cesium.Ellipsoid.WGS84;
-                var pixelRatio = window.devicePixelRatio || 1;
-                var c2 = new Cesium.Cartesian2(-offset, -offset);
-                var leftTop = this.viewer.scene.camera.pickEllipsoid(c2, ellipsoid);
-                c2 = new Cesium.Cartesian2((this.viewer.scene.canvas.width / pixelRatio) + offset, (this.viewer.scene.canvas.height / pixelRatio) + offset);
-                var rightDown = this.viewer.scene.camera.pickEllipsoid(c2, ellipsoid);
-                if (leftTop != null && rightDown != null) {
-                    leftTop = ellipsoid.cartesianToCartographic(leftTop);
-                    rightDown = ellipsoid.cartesianToCartographic(rightDown);
-                    // sometimes at a certain camera pos/zoom, the canvas corners effectively disappear over
-                    // the horizon and wrap around the globe, while still passing as a valid rectangle
-                    if (leftTop.longitude > rightDown.longitude) {
-                        return this.defaultExtent;
-                    }
-                    return {
-                        west: Cesium.Math.toDegrees(leftTop.longitude),
-                        south: Cesium.Math.toDegrees(rightDown.latitude),
-                        east: Cesium.Math.toDegrees(rightDown.longitude),
-                        north: Cesium.Math.toDegrees(leftTop.latitude)
-                    };
-                }
-                else {
-                    return this.defaultExtent;
-                }
+                return 0;
             };
             ZoomLevelService.$inject = [
                 "$rootScope",
@@ -543,8 +1367,8 @@ var rpComponents;
     })(zoom = rpComponents.zoom || (rpComponents.zoom = {}));
 })(rpComponents || (rpComponents = {}));
 /// <reference path="../../typings/browser.d.ts" />
-/// <reference path="charts" />
-/// <reference path="config" />
+/// <reference path="../components/charts" />
+/// <reference path="../components/config" />
 /// <reference path="../components/cluster-filters" />
 /// <reference path="../components/spinner" />
 /// <reference path="cluster-inspector" />
@@ -574,9 +1398,7 @@ var rpComponents;
                 this.rocksConfigService = rocksConfigService;
                 this.clusterInspectorService = clusterInspectorService;
                 this.clusterFilterState = clusterFilterState;
-                this.clusterRangeMeta = {
-                    maxExtrudeHeight: 6000000
-                };
+                this.sequence = 0;
                 this.clusterFilter = '';
                 /**
                  *
@@ -585,163 +1407,73 @@ var rpComponents;
                  *
                  */
                 this.reCluster = function () {
-                    var clusterInstances = [];
-                    var labelCollection = new Cesium.LabelCollection();
-                    _this.getClusters().then(function (response) {
-                        if (response.data && response.data.features) {
-                            var clusters = response.data.features;
-                            // use d3 to build a scale for our extrude heights; we need to build a diff scale
-                            // for each zoom level, as we can't guarantee they'll start at the top and work down
-                            // (if we add persistence)
-                            var maxCorrection = new ClusterHeightWeighter().calculateWeighting(_this.zoomLevelService.nextIndex);
-                            _this.clusterRangeMeta.maxCount = d3.max(clusters, function (d) { return d.properties.count; });
-                            _this.clusterRangeMeta.scale = d3.scale.linear()
-                                .domain([0, _this.clusterRangeMeta.maxCount])
-                                .range([0, _this.clusterRangeMeta.maxExtrudeHeight / maxCorrection]);
-                            for (var i = 0; i < clusters.length; i++) {
-                                // tag id with type for pick handling
-                                clusters[i].properties['featureType'] = 'rockPropsCluster';
-                                var clusterProps = _this.computeClusterAttributes(clusters[i].properties.count);
-                                clusterInstances.push(_this.buildClusterInstance(clusters[i], clusterProps));
-                                labelCollection.add(_this.buildLabel(clusters[i], clusterProps)); // No lables for the short term
-                            }
-                            _this.drawClusters(clusterInstances, labelCollection);
-                        }
-                        else {
-                            console.log("got no clusters");
-                            console.log(response);
-                        }
-                    });
                 };
                 this.$rootScope.$on('rocks.config.ready', function () {
                     _this.map = _this.rocksConfigService.map;
                     _this.serviceUrl = _this.rocksConfigService.config.rocksServiceUrl;
-                });
-                this.$rootScope.$on('rocks.clusters.update', function () {
-                    _this.reCluster();
+                    _this.init();
                 });
             }
+            ClusterService.prototype.init = function () {
+                this.map.on('zoomend', movePan);
+                this.map.on('dragend', movePan);
+                function movePan(event) {
+                    if (this.layer) {
+                        this.map.removeLayer(this.layer);
+                        this.layer = null;
+                    }
+                    var instanceSequence = ++this.sequence;
+                    var zoom = this.map.getZoom();
+                    var bounds = this.map.getBounds();
+                    var parms = [];
+                    parms.push("xmin=" + Math.max(bounds.getWest() - 20 / Math.pow(zoom, 1.2), -180));
+                    +parms.push("xmax=" + Math.min(bounds.getEast() + 20 / Math.pow(zoom, 1.2), 180));
+                    parms.push("ymin=" + Math.max(bounds.getSouth() - 10 / Math.pow(zoom, 1.2), -90));
+                    parms.push("ymax=" + Math.min(bounds.getNorth() + 10 / Math.pow(zoom, 1.2), 90));
+                    parms.push("zoom=" + (Math.max(zoom, 2)));
+                    var geojsonMarkerOptions = {
+                        radius: 8,
+                        fillColor: "#ff7800",
+                        color: "#000",
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    };
+                    this.$http.get(this.serviceUrl + "?" + parms.join("&")).then(function (result) {
+                        if (instanceSequence < this.sequence) {
+                            return;
+                        }
+                        var maxRadius = Math.sqrt(d3.max(result.data.features, function (item) {
+                            return item.properties.count;
+                        }));
+                        this.layer = L.geoJson(result.data, {
+                            pointToLayer: function (feature, latlng) {
+                                var geojsonMarkerOptions = {
+                                    radius: 4 + 20 / maxRadius * Math.sqrt(feature.properties.count),
+                                    fillColor: "#ff7800",
+                                    color: "#000",
+                                    weight: 1,
+                                    opacity: 1,
+                                    fillOpacity: 0.8
+                                };
+                                var marker = L.circleMarker(latlng, geojsonMarkerOptions)
+                                    .bindLabel("" + feature.properties.count, { noHide: true });
+                                marker.on("click", function () {
+                                    var id = this.feature.id.split("/");
+                                    //		    		        	rocks3dNavigatorService.to({
+                                    //		    		        		zoom: id[0],
+                                    //		    		        		x: id[1],
+                                    //		    		        		y: id[2]
+                                    //		    		        	})
+                                });
+                                return marker;
+                            }
+                        }).addTo(this.map);
+                    });
+                }
+            };
             ClusterService.prototype.toggleClusters = function () {
-                if (this.clustersCollection) {
-                    this.clustersCollection.show = !this.clustersCollection.show;
-                    this.zoomLevelService.setActive(this.clustersCollection.show);
-                    if (this.clustersCollection.show) {
-                        this.clusterInspectorService.setPickEnabled(true);
-                    }
-                    else {
-                        this.clusterInspectorService.setPickEnabled(false);
-                    }
-                    this.reCluster();
-                }
-                else {
-                    this.clustersCollection = new Cesium.PrimitiveCollection();
-                    this.viewer.scene.primitives.add(this.clustersCollection);
-                    this.zoomLevelService.setActive(true);
-                    this.reCluster();
-                    this.clusterInspectorService.setPickEnabled(true);
-                }
-                return this.clustersCollection.show;
-            };
-            /**
-             *
-             * TODO filters
-             *
-             * @returns {IHttpPromise<T>}
-             */
-            ClusterService.prototype.getClusters = function () {
-                var west = this.zoomLevelService.getViewExtent(100).west;
-                var east = this.zoomLevelService.getViewExtent(100).east;
-                var north = this.zoomLevelService.getViewExtent(100).north;
-                var south = this.zoomLevelService.getViewExtent(100).south;
-                var dx = (east - west) * .2;
-                var dy = (north - south) * .2;
-                // args
-                var args = '?zoom=' + this.zoomLevelService.nextIndex +
-                    '&xmin=' + above(west - dx, -180) +
-                    '&xmax=' + below(east + dx, 180) +
-                    '&ymin=' + above(south - dy, -90) +
-                    '&ymax=' + below(north + dy, 90) +
-                    this.clusterFilterState.filterQuery;
-                console.log("summary query: " + this.serviceUrl + args);
-                return this.$http({
-                    method: 'GET',
-                    // real service
-                    url: this.serviceUrl + 'summary' + args
-                });
-                function above(value, limit) {
-                    return value < limit ? limit : value;
-                }
-                function below(value, limit) {
-                    return value > limit ? limit : value;
-                }
-            };
-            ClusterService.prototype.drawClusters = function (instances, labelCollection) {
-                this.clustersCollection.removeAll();
-                this.clusterPrimitive = new Cesium.Primitive({
-                    geometryInstances: instances,
-                    appearance: new Cesium.PerInstanceColorAppearance({
-                        translucent: true,
-                        closed: true
-                    })
-                });
-                this.clusterInspectorService.setClusterPrimitive((this.clusterPrimitive));
-                this.clustersCollection.add(this.clusterPrimitive);
-                this.clustersCollection.add(labelCollection);
-            };
-            ClusterService.prototype.buildClusterInstance = function (cluster, clusterProps) {
-                return new Cesium.GeometryInstance({
-                    geometry: new Cesium.CircleGeometry({
-                        center: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1]),
-                        radius: clusterProps.radius,
-                        vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-                        extrudedHeight: clusterProps.extrudeHeight
-                    }),
-                    id: cluster,
-                    attributes: {
-                        color: Cesium.ColorGeometryInstanceAttribute.fromColor(clusterProps.color)
-                    }
-                });
-            };
-            ClusterService.prototype.buildLabel = function (cluster, clusterProps) {
-                return {
-                    position: Cesium.Cartesian3.fromDegrees(cluster.geometry.coordinates[0], cluster.geometry.coordinates[1], clusterProps.extrudeHeight + clusterProps.radius + 30),
-                    text: cluster.properties.count.toString(),
-                    fillColor: Cesium.Color.BLACK,
-                    outlineColor: Cesium.Color.RED,
-                    // TODO review labelling
-                    font: (26 - (this.zoomLevelService.nextIndex * 0.2)) + 'px arial, sans-serif',
-                    horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-                    id: cluster
-                };
-            };
-            ClusterService.prototype.computeClusterAttributes = function (count) {
-                var radius = this.zoomLevelService.zoomLevels[this.zoomLevelService.zoomLevels.length - this.zoomLevelService.nextIndex] / 150;
-                var maxHeight = this.zoomLevelService.nextPosition.height * 0.6;
-                var extrudeHeight = this.clusterRangeMeta.scale(count) / Math.pow(this.zoomLevelService.nextIndex / 3, 1.15);
-                if (extrudeHeight > maxHeight) {
-                    extrudeHeight = maxHeight;
-                }
-                if (radius > maxHeight / 20) {
-                    console.log("To big!");
-                    radius = maxHeight / 20;
-                }
-                var attrs = {
-                    // tweak these to scale cluster size/extrude on zoom
-                    radius: radius,
-                    extrudeHeight: extrudeHeight
-                };
-                if (count < 100) {
-                    attrs.color = Cesium.Color.fromCssColorString('#4781cd').withAlpha(0.5);
-                }
-                else if (count < 1000) {
-                    attrs.radius *= 1.3;
-                    attrs.color = Cesium.Color.fromCssColorString('#0fc70e').withAlpha(0.5);
-                }
-                else {
-                    attrs.radius *= 1.6;
-                    attrs.color = Cesium.Color.fromCssColorString('#ff0000').withAlpha(0.5);
-                }
-                return attrs;
+                return true;
             };
             ClusterService.$inject = [
                 "$http",
@@ -1074,881 +1806,6 @@ var rpComponents;
             };
         });
     })(chartService = rpComponents.chartService || (rpComponents.chartService = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/browser.d.ts" />
-var rpComponents;
-(function (rpComponents) {
-    var config;
-    (function (config_1) {
-        'use strict';
-        var RocksConfigService = (function () {
-            function RocksConfigService($rootScope) {
-                this.$rootScope = $rootScope;
-            }
-            RocksConfigService.prototype.setConfig = function (config, map) {
-                this.config = config;
-                this.map = map;
-                this.$rootScope.$broadcast("rocks.config.ready");
-            };
-            RocksConfigService.$inject = [
-                "$rootScope"
-            ];
-            return RocksConfigService;
-        }());
-        config_1.RocksConfigService = RocksConfigService;
-        angular
-            .module('explorer.rockproperties.config', [])
-            .factory("rocksConfigService", ["$rootScope",
-            function ($rootScope) {
-                return new rpComponents.config.RocksConfigService($rootScope);
-            }]);
-    })(config = rpComponents.config || (rpComponents.config = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/browser.d.ts" />
-/**
- *
- * Geoserver Utils, e.g. get list of layers names from web map service.
- *
- */
-var rpComponents;
-(function (rpComponents) {
-    var gwsUtilService;
-    (function (gwsUtilService) {
-        'use strict';
-        var GwsUtilService = (function () {
-            function GwsUtilService($q, $http, rocksConfigService) {
-                this.$q = $q;
-                this.$http = $http;
-                this.rocksConfigService = rocksConfigService;
-            }
-            GwsUtilService.prototype.getWfsFeatureTypeNames = function () {
-                var _this = this;
-                var deferred = this.$q.defer();
-                this.$http.get(this.rocksConfigService.config.geoserverWfsUrl
-                    + '?request=GetCapabilities&service=wfs&version='
-                    + this.rocksConfigService.config.geoserverWfsVersion).
-                    success(function (data, status, headers, config) {
-                    var layerNames = _this.getFeatureTypeNamesFromWfsCapsJson(_this.xmlToJson($.parseXML(data)));
-                    deferred.resolve(layerNames);
-                }).
-                    error(function (err) {
-                    console.log("GetCapabilities request failed");
-                    console.log(err);
-                    deferred.error();
-                });
-                return deferred.promise;
-            };
-            GwsUtilService.prototype.getFeatureTypeNamesFromWfsCapsJson = function (data) {
-                var layerData = data["wfs:WFS_Capabilities"].FeatureTypeList.FeatureType;
-                var layers = [];
-                for (var i = 0; i < layerData.length; i++) {
-                    layers.push(layerData[i].Name["#text"]);
-                }
-                return layers;
-            };
-            GwsUtilService.prototype.getWmsLayerNames = function () {
-                var _this = this;
-                var deferred = this.$q.defer();
-                this.$http.get(this.rocksConfigService.config.geoserverWmsUrl
-                    + '?request=GetCapabilities&service=wms&version='
-                    + this.rocksConfigService.config.geoserverWmsVersion).
-                    success(function (data, status, headers, config) {
-                    _this.wmsLayerNames = _this.getLayerNamesFromWmsCapsJson(_this.xmlToJson($.parseXML(data)));
-                    deferred.resolve(_this.wmsLayerNames);
-                }).
-                    error(function (err) {
-                    console.log("GetCapabilities request failed");
-                    console.log(err);
-                    deferred.error();
-                });
-                return deferred.promise;
-            };
-            GwsUtilService.prototype.getLayerNamesFromWmsCapsJson = function (data) {
-                var layerData = data.WMS_Capabilities.Capability.Layer.Layer;
-                var layers = [];
-                for (var i = 0; i < layerData.length; i++) {
-                    layers.push(layerData[i].Name["#text"]);
-                }
-                return layers;
-            };
-            GwsUtilService.prototype.xmlToJson = function (xml) {
-                var obj = {};
-                if (xml.nodeType == 1) {
-                    // do attributes
-                    if (xml.attributes.length > 0) {
-                        obj["@attributes"] = {};
-                        for (var j = 0; j < xml.attributes.length; j++) {
-                            var attribute = xml.attributes.item(j);
-                            obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
-                        }
-                    }
-                }
-                else if (xml.nodeType == 3) {
-                    obj = xml.nodeValue;
-                }
-                // do children
-                if (xml.hasChildNodes()) {
-                    for (var i = 0; i < xml.childNodes.length; i++) {
-                        var item = xml.childNodes.item(i);
-                        var nodeName = item.nodeName;
-                        if (typeof (obj[nodeName]) == "undefined") {
-                            obj[nodeName] = this.xmlToJson(item);
-                        }
-                        else {
-                            if (typeof (obj[nodeName].push) == "undefined") {
-                                var old = obj[nodeName];
-                                obj[nodeName] = [];
-                                obj[nodeName].push(old);
-                            }
-                            obj[nodeName].push(this.xmlToJson(item));
-                        }
-                    }
-                }
-                return obj;
-            };
-            GwsUtilService.$inject = [
-                "$q",
-                "$http",
-                "rocksConfigService"
-            ];
-            return GwsUtilService;
-        }());
-        gwsUtilService.GwsUtilService = GwsUtilService;
-        angular
-            .module('explorer.rockproperties.gwsutil', [])
-            .factory("gwsUtilService", ["$q", "$http", "rocksConfigService",
-            function ($q, $http, rocksConfigService) {
-                return new rpComponents.gwsUtilService.GwsUtilService($q, $http, rocksConfigService);
-            }]);
-    })(gwsUtilService = rpComponents.gwsUtilService || (rpComponents.gwsUtilService = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/browser.d.ts" />
-/// <reference path="clipship" />
-/// <reference path="config" />
-/// <reference path="spinner" />
-/// <reference path="gws-util" />
-var rpComponents;
-(function (rpComponents) {
-    var queryBuilderExport;
-    (function (queryBuilderExport) {
-        'use strict';
-        var QueryBuilder = (function () {
-            function QueryBuilder($q, $http, $rootScope, loadingSpinnerService, rocksClipShipService, rocksConfigService, gwsUtilService) {
-                var _this = this;
-                this.$q = $q;
-                this.$http = $http;
-                this.$rootScope = $rootScope;
-                this.loadingSpinnerService = loadingSpinnerService;
-                this.rocksClipShipService = rocksClipShipService;
-                this.rocksConfigService = rocksConfigService;
-                this.gwsUtilService = gwsUtilService;
-                this.propertyQuery = "";
-                this.$inject = [
-                    "$q",
-                    "$http",
-                    "$rootScope",
-                    "loadingSpinnerService",
-                    "rocksClipShipService",
-                    "rocksConfigService",
-                    "gwsUtilService"
-                ];
-                this.$rootScope.$on("rocks.config.ready", function () {
-                    // build base query URL from config
-                    _this.baseUrl = _this.rocksConfigService.config.geoserverWfsUrl + "?";
-                    angular.forEach(_this.rocksConfigService.config.geoserverWfsExportParams, function (value, key) {
-                        _this.baseUrl += key + "=" + value + "&";
-                    });
-                    // lose trailing &
-                    _this.baseUrl = _this.baseUrl.slice(0, -1);
-                    // get WFS layer names
-                    _this.gwsUtilService.getWfsFeatureTypeNames().then(function (layerNames) {
-                        _this.wfsLayerNames = layerNames;
-                    });
-                });
-            }
-            QueryBuilder.prototype.startClipShip = function (features, format, extent) {
-                var _this = this;
-                // TODO fire flasher event for UI?
-                this.loading = true;
-                // init spinner
-                if (!this.loadingSpinner) {
-                    this.loadingSpinner = this.loadingSpinnerService.addSpinner({
-                        width: 80,
-                        height: 80,
-                        container: "#rock-clip-ship-loading",
-                        id: "clip-ship-spinner"
-                    });
-                    this.loadingSpinner();
-                }
-                var targetFeatures = [];
-                for (var i = 0; i < features.length; i++) {
-                    if (features[i].isSelected)
-                        targetFeatures.push(features[i].name);
-                }
-                if (format === "csv") {
-                    var zip = new JSZip();
-                    // give zip file to decent browsers
-                    if (JSZip.support.blob) {
-                        var promises = [];
-                        // create a Get query for each layer
-                        for (var i = 0; i < this.wfsLayerNames.length; i++) {
-                            var query = this.buildQuery(targetFeatures, extent, format, [this.wfsLayerNames[i]]);
-                            var promise = this.$http.get(query);
-                            promises.push(promise);
-                        }
-                        this.$q.all(promises).then(function (results) {
-                            for (var i = 0; i < results.length; i++) {
-                                // we'll assume that if there's more than one line we've got data to write
-                                var numberOfLineBreaks = (results[i]['data'].match(/\n/g) || []).length;
-                                if (numberOfLineBreaks > 1) {
-                                    var filename = _this.wfsLayerNames[i].split(' ').join('-');
-                                    zip.file(filename + ".csv", results[i]['data'] + "\n");
-                                }
-                            }
-                            // FileSaver.js
-                            var content = zip.generate({ type: "blob" });
-                            saveAs(content, "rocks-export.zip");
-                            _this.loading = false;
-                            _this.rocksClipShipService.step = 'startDraw';
-                        });
-                    }
-                    else {
-                        // just give separate file for each layer
-                        for (var i = 0; i < this.wfsLayerNames.length; i++) {
-                            window.open(this.buildQuery(targetFeatures, extent, format, [this.wfsLayerNames[i]]));
-                        }
-                        this.loading = false;
-                    }
-                }
-                else {
-                    // give the user the query url directly
-                    this.exportUrl = this.buildQuery(targetFeatures, extent, format, this.wfsLayerNames);
-                    this.loading = false;
-                }
-            };
-            QueryBuilder.prototype.buildQuery = function (properties, extent, format, layerNames) {
-                var typeNamesQuery = this.getTypeNamesQuery(layerNames);
-                // BBOX and FILTER queries are mutually exclusive, so must use CQL
-                var bboxQuery = "&CQL_FILTER=BBOX(GEOM," + extent.west + "," + extent.south + "," + extent.east + "," + extent.north + ")";
-                var filterQuery = "";
-                var filters = {}; // filterState.filters;
-                var exportFormat = "&outputFormat=" + format;
-                var query;
-                var hasFilters = !isEmpty(filters);
-                var filtersHasProperty = filters.hasOwnProperty("PROPERTY");
-                var onlyHasPropertyFilter = (filtersHasProperty && (Object.keys(filters).length === 1)) ? true : false;
-                function isEmpty(obj) {
-                    for (var prop in obj) {
-                        if (obj.hasOwnProperty(prop))
-                            return false;
-                    }
-                    return true;
-                }
-                // single feature/layer query with filters
-                if (hasFilters && filtersHasProperty) {
-                    this.propertyQuery = "%20AND%20PROPERTY='" + filters['PROPERTY'] + "'";
-                    if (!onlyHasPropertyFilter) {
-                        filterQuery = this.getFilters(filters);
-                    }
-                }
-                else if (hasFilters) {
-                    this.propertyQuery = this.getPropertyQuery(properties);
-                    if (!onlyHasPropertyFilter) {
-                        filterQuery = this.getFilters(filters);
-                    }
-                }
-                else {
-                    this.propertyQuery = this.getPropertyQuery(properties);
-                }
-                ga('send', 'event', 'explorer-rock-properties', 'click', 'clipship data export: ' + format);
-                query = this.baseUrl + typeNamesQuery + exportFormat + bboxQuery + filterQuery + this.propertyQuery;
-                return query;
-            };
-            // create filter query for each of the selected attribute values
-            // don't include PROPERTY here as we want to apply OR logic
-            QueryBuilder.prototype.getFilters = function (filters) {
-                var filterString = "%20AND%20";
-                // create filters string
-                for (var property in filters) {
-                    if (property !== "PROPERTY") {
-                        filterString = filterString.concat(property + "='" + filters[property] + "'%20AND%20");
-                    }
-                }
-                // trim tailing AND
-                filterString = filterString.substring(0, filterString.length - 9);
-                return filterString;
-            };
-            // build CQL query for properties
-            QueryBuilder.prototype.getPropertyQuery = function (properties) {
-                var query = "%20AND%20(";
-                for (var i = 0; i < properties.length; i++) {
-                    query = query.concat("PROPERTY='" + properties[i] + "'%20OR%20");
-                }
-                // trim trailing OR, close bracket
-                query = query.substring(0, query.length - 8);
-                query = query.concat(")");
-                return query;
-            };
-            QueryBuilder.prototype.getTypeNamesQuery = function (layers) {
-                var query = "&typeName=";
-                for (var i = 0; i < layers.length; i++) {
-                    query = query.concat(layers[i] + ",");
-                }
-                query = query.substring(0, query.length - 1);
-                return query;
-            };
-            return QueryBuilder;
-        }());
-        queryBuilderExport.QueryBuilder = QueryBuilder;
-        angular
-            .module('explorer.rockproperties.queryexport', [])
-            .factory("rocksQueryBuilderExport", [
-            "$q",
-            "$http",
-            "$rootScope",
-            "loadingSpinnerService",
-            "rocksClipShipService",
-            "rocksConfigService",
-            "gwsUtilService",
-            function ($q, $http, $rootScope, loadingSpinnerService, rocksClipShipService, rocksConfigService, gwsUtilService) {
-                return new rpComponents.queryBuilderExport.QueryBuilder($q, $http, $rootScope, loadingSpinnerService, rocksClipShipService, rocksConfigService, gwsUtilService);
-            }]);
-    })(queryBuilderExport = rpComponents.queryBuilderExport || (rpComponents.queryBuilderExport = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/browser.d.ts" />
-/// <reference path="../components/spinner" />
-/// <reference path="../components/clipship" />
-var rpComponents;
-(function (rpComponents) {
-    var wmsInspectorService;
-    (function (wmsInspectorService_1) {
-        'use strict';
-        var WmsInspectorCtrl = (function () {
-            function WmsInspectorCtrl($scope, wmsInspectorState, wmsInspectorService) {
-                this.$scope = $scope;
-                this.wmsInspectorState = wmsInspectorState;
-                this.wmsInspectorService = wmsInspectorService;
-            }
-            WmsInspectorCtrl.$inject = ["$scope", "wmsInspectorState", "wmsInspectorService"];
-            return WmsInspectorCtrl;
-        }());
-        wmsInspectorService_1.WmsInspectorCtrl = WmsInspectorCtrl;
-        var WmsInspectorService = (function () {
-            function WmsInspectorService($rootScope, $http, wmsInspectorState, assetsService, configService, rocksConfigService, loadingSpinnerService, gwsUtilService, rocksClipShipService) {
-                var _this = this;
-                this.$rootScope = $rootScope;
-                this.$http = $http;
-                this.wmsInspectorState = wmsInspectorState;
-                this.assetsService = assetsService;
-                this.configService = configService;
-                this.rocksConfigService = rocksConfigService;
-                this.loadingSpinnerService = loadingSpinnerService;
-                this.gwsUtilService = gwsUtilService;
-                this.rocksClipShipService = rocksClipShipService;
-                this.isLoading = false;
-                this.URL_EXCLUDE = "?SERVICE=WMS&";
-                this.SURFACE_GEO = "GA_Surface_Geology_of_Australia";
-                this.$inject = [
-                    "$rootScope",
-                    "$http",
-                    "wmsInspectorState",
-                    "assetsService",
-                    "configService",
-                    "rocksConfigService",
-                    "loadingSpinnerService",
-                    "gwsUtilService",
-                    "rocksClipShipService"
-                ];
-                // register listener for pointInspector
-                this.$rootScope.$on("viewer.click.left", function (event, data) {
-                    data.degrees = {
-                        lat: Cesium.Math.toDegrees(data.cartographic.latitude),
-                        lon: Cesium.Math.toDegrees(data.cartographic.longitude)
-                    };
-                    // TODO should flasher for this so user knows why
-                    // (we don't want inspector interuppting clipship drawing)
-                    if (_this.rocksClipShipService.isDrawing) {
-                        return;
-                    }
-                    if (_this.inspectorEnabled && data.hasOwnProperty('cartographic')) {
-                        // make sure panel is visible
-                        _this.$rootScope.$broadcast("rocks.accordion.update", "wmsInspector");
-                        _this.$rootScope.$broadcast("toolbar.toggle.update", { linked: false, key: "rocksClusters", isActive: true });
-                        _this.wmsInspectorState.targetGeom = data;
-                        _this.wmsInspectorState.view = "LAYERSELECT";
-                        _this.wmsInspectorState.cameraHeight = Cesium.Ellipsoid.WGS84.cartesianToCartographic(_this.rocksConfigService.viewer.camera.position).height;
-                    }
-                });
-                this.$rootScope.$on('rocks.config.ready', function () {
-                    // load feature classes
-                    assetsService.getReferenceFeatureClasses().then(function (features) {
-                        _this.features = features;
-                    });
-                    // init rocks feature
-                    _this.rocksFeature = {
-                        wmsUrl: _this.rocksConfigService.config.geoserverWmsUrl,
-                        name: 'Rock Properties Layer'
-                    };
-                });
-            }
-            WmsInspectorService.prototype.togglePointInspector = function () {
-                this.inspectorEnabled != this.inspectorEnabled;
-            };
-            // TODO we should restrict the query to visible layers
-            WmsInspectorService.prototype.queryRocks = function () {
-                if (!this.rocksFeature.hasOwnProperty('layers') && this.gwsUtilService.wmsLayerNames) {
-                    this.rocksFeature.layers = [];
-                    for (var i = 0; i < this.gwsUtilService.wmsLayerNames.length; i++) {
-                        this.rocksFeature.layers.push(this.rocksConfigService.config.geoserverWmsLayerPrefix +
-                            this.gwsUtilService.wmsLayerNames[i]);
-                    }
-                }
-                this.queryFeature(this.rocksFeature);
-            };
-            WmsInspectorService.prototype.queryFeature = function (feature) {
-                var _this = this;
-                ga('send', 'event', 'explorer-rock-properties', 'click', 'wms inspector query: ' + feature.name);
-                // set view
-                this.wmsInspectorState.view = "FEATUREINFO";
-                this.toggleLoading();
-                var targetUrl = feature.wmsUrl;
-                var targetLayers = feature.layers;
-                // clean any endpoints already containing '?'
-                if (targetUrl.indexOf(this.URL_EXCLUDE) > -1) {
-                    targetUrl = targetUrl.substring(0, (targetUrl.length - this.URL_EXCLUDE.length));
-                }
-                // surface geology has scale dependencies, so we need to check
-                // zoom (aka camera height) to ensure we query the correct layer
-                if (targetUrl.indexOf(this.SURFACE_GEO) > -1) {
-                    if (this.wmsInspectorState.cameraHeight <= 340000) {
-                        targetLayers = [targetLayers[0]];
-                    }
-                    else {
-                        targetLayers = [targetLayers[1]];
-                    }
-                }
-                var queryString = '?SERVICE=WMS' +
-                    '&REQUEST=GetFeatureInfo' +
-                    '&VERSION=1.1.1' +
-                    '&LAYERS=' + targetLayers +
-                    '&STYLES=' +
-                    '&SRS=EPSG%3A4326' +
-                    '&FORMAT=image%2Fpng' +
-                    // we use the click pos as the bottom left corner
-                    // and offset the top right by ~30 meters
-                    // (can be hard to click on a point if res is too fine)
-                    '&BBOX=' +
-                    (this.wmsInspectorState.targetGeom.degrees.lon) + ',' +
-                    (this.wmsInspectorState.targetGeom.degrees.lat) + ',' +
-                    (this.wmsInspectorState.targetGeom.degrees.lon + 0.003) + ',' +
-                    (this.wmsInspectorState.targetGeom.degrees.lat + 0.003) +
-                    '&QUERY_LAYERS=' + targetLayers +
-                    '&INFO_FORMAT=text%2Fhtml' +
-                    '&FEATURE_COUNT=100' +
-                    '&WIDTH=2' +
-                    '&HEIGHT=2' +
-                    '&X=1' +
-                    '&Y=1' +
-                    '&TRANSPARENT=true' +
-                    '&EXCEPTIONS=application%2Fvnd.ogc.se_xml';
-                // send the query
-                this.$http.get(targetUrl + queryString).success(function (data) {
-                    _this.featureInfo = data;
-                    _this.toggleLoading();
-                })
-                    .error(function (data, status, headers, config) {
-                    console.log("Couldn't load WMS GetFeatureInfo");
-                    this.featureInfo = "<h5>Couldn't load WMS GetFeatureInfo for this layer.</h5><p>You may not be able to access this function for some layers.</p>";
-                    this.toggleLoading();
-                });
-            };
-            WmsInspectorService.prototype.toggleLoading = function () {
-                if (this.loadingSpinner) {
-                    this.isLoading = !this.isLoading;
-                }
-                else {
-                    this.loadingSpinner = this.loadingSpinnerService.addSpinner({
-                        width: 60,
-                        height: 60,
-                        container: "#rocks-inspector-loading",
-                        id: "rocks-inspector-spinner"
-                    });
-                    this.loadingSpinner();
-                    this.isLoading = true;
-                }
-            };
-            return WmsInspectorService;
-        }());
-        wmsInspectorService_1.WmsInspectorService = WmsInspectorService;
-        angular
-            .module('explorer.rockproperties.inspector', [])
-            .factory("wmsInspectorService", [
-            "$rootScope",
-            "$http",
-            "wmsInspectorState",
-            "assetsService",
-            "configService",
-            "rocksConfigService",
-            "loadingSpinnerService",
-            "gwsUtilService",
-            "rocksClipShipService",
-            function ($rootScope, $http, wmsInspectorState, assetsService, configService, rocksConfigService, loadingSpinnerService, gwsUtilService, rocksClipShipService) {
-                return new rpComponents.wmsInspectorService.WmsInspectorService($rootScope, $http, wmsInspectorState, assetsService, configService, rocksConfigService, loadingSpinnerService, gwsUtilService, rocksClipShipService);
-            }])
-            .controller("wmsInspectorCtrl", rpComponents.wmsInspectorService.WmsInspectorCtrl)
-            .directive("wmsInspectorPanel", function () {
-            return {
-                templateUrl: 'rockprops/wms-inspector-panel.html',
-                controller: WmsInspectorCtrl,
-                controllerAs: 'wmsInspectorVM'
-            };
-        });
-    })(wmsInspectorService = rpComponents.wmsInspectorService || (rpComponents.wmsInspectorService = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/browser.d.ts" />
-var rpComponents;
-(function (rpComponents) {
-    var wmsInspectorState;
-    (function (wmsInspectorState) {
-        'use strict';
-        /*
-            The WMS inspector panel can be in 1 of 3 view states:
-            1. INTRO - the default/home shows prompt
-            2. LAYERSELECT - user presented with layers to interrogate with GetFeatureInfo when
-            they have clicked a point on the map
-            3. FEATUREINFO - view to present raw html returned by GetFeatureInfo
-         */
-        var WmsInspectorState = (function () {
-            function WmsInspectorState() {
-                this.view = "INTRO";
-            }
-            return WmsInspectorState;
-        }());
-        wmsInspectorState.WmsInspectorState = WmsInspectorState;
-        angular
-            .module('explorer.rockproperties.inspectorstate', [])
-            .factory("wmsInspectorState", [function () { return new rpComponents.wmsInspectorState.WmsInspectorState(); }]);
-    })(wmsInspectorState = rpComponents.wmsInspectorState || (rpComponents.wmsInspectorState = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/browser.d.ts" />
-/// <reference path="config" />
-/// <reference path="control-panel" />
-/// <reference path="../leaflet/wms-inspector" />
-/// <reference path="../leaflet/wms-inspector-state" />
-/// <reference path="gws-util" />
-var rpComponents;
-(function (rpComponents) {
-    var pointsService;
-    (function (pointsService) {
-        'use strict';
-        var RocksWmsPointsCtrl = (function () {
-            function RocksWmsPointsCtrl($scope, wmsPointsService, rocksPanelService, wmsInspectorState) {
-                this.$scope = $scope;
-                this.wmsPointsService = wmsPointsService;
-                this.rocksPanelService = rocksPanelService;
-                this.wmsInspectorState = wmsInspectorState;
-            }
-            RocksWmsPointsCtrl.$inject = ["$scope", "wmsPointsService", "rocksPanelService", "wmsInspectorState"];
-            return RocksWmsPointsCtrl;
-        }());
-        pointsService.RocksWmsPointsCtrl = RocksWmsPointsCtrl;
-        var WmsPointsService = (function () {
-            function WmsPointsService($rootScope, gwsUtilService, rocksConfigService, wmsInspectorState) {
-                var _this = this;
-                this.$rootScope = $rootScope;
-                this.gwsUtilService = gwsUtilService;
-                this.rocksConfigService = rocksConfigService;
-                this.wmsInspectorState = wmsInspectorState;
-                this.inspectorEnabled = true;
-                this.masterChecked = true;
-                this.legendParamString = "";
-                this.$inject = [
-                    "$rootScope",
-                    "gwsUtilService",
-                    "rocksConfigService",
-                    "wmsInspectorState"
-                ];
-                this.$rootScope.$on('rocks.config.ready', function () {
-                    _this.init();
-                });
-            }
-            WmsPointsService.prototype.init = function () {
-                var _this = this;
-                this.wmsServiceUrl = this.rocksConfigService.config.geoserverWmsUrl;
-                this.map = this.rocksConfigService.map;
-                this.restrictedBounds = [109, -45, 158, -8];
-                // build our legend param string from config
-                this.legendParamString = "?";
-                angular.forEach(this.rocksConfigService.config.geoserverWmsLegendParams, function (value, key) {
-                    _this.legendParamString += key + "=" + value + "&";
-                });
-                // lose trailing &
-                this.legendParamString = this.legendParamString.slice(0, -1) + "&LAYER=";
-                this.gwsUtilService.getWmsLayerNames().then(function (layers) {
-                    _this.layers = layers;
-                    _this.getLegendData();
-                });
-            };
-            WmsPointsService.prototype.togglePoints = function () {
-                this.pointsVisible = !this.pointsVisible;
-                if (this.wmsLayer) {
-                    this.wmsLayer.show = this.pointsVisible;
-                }
-                else {
-                    this.updatePointsLayer();
-                }
-                return this.pointsVisible;
-            };
-            WmsPointsService.prototype.toggleChecked = function () {
-                this.masterChecked != this.masterChecked;
-                for (var legend in this.legendData) {
-                    this.legendData[legend]['isSelected'] = this.masterChecked;
-                }
-            };
-            WmsPointsService.prototype.getLegendData = function () {
-                this.legendData = {};
-                for (var i = 0; i < this.layers.length; i++) {
-                    this.legendData[this.layers[i]] = {
-                        legendUrl: this.wmsServiceUrl + this.legendParamString + this.layers[i],
-                        isSelected: true
-                    };
-                }
-            };
-            WmsPointsService.prototype.updatePointsLayer = function () {
-                var targetLayers = [];
-                for (var legend in this.legendData) {
-                    if (this.legendData.hasOwnProperty(legend) && this.legendData[legend]['isSelected'] === true) {
-                        targetLayers.push(legend);
-                    }
-                }
-                if (this.wmsLayer) {
-                    this.map.remove(this.wmsLayer);
-                }
-                ga('send', 'event', 'explorer-rock-properties', 'click', 'update wms points layer: ' + targetLayers.toString());
-                this.wmsLayer = L.tileLayer.wms(this.wmsServiceUrl, {
-                    layers: targetLayers.toString(),
-                    transparent: true,
-                    format: 'image/png'
-                });
-                this.map.addLayer(this.wmsLayer);
-                /*            this.wmsLayer = this.viewer.imageryLayers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
-                                url : this.wmsServiceUrl,
-                                layers: targetLayers.toString(),
-                                rectangle: this.restrictedBounds,
-                                parameters : {
-                                    transparent : 'true',
-                                    format : 'image/png'
-                                },
-                                enablePickFeatures: false
-                            }));
-                            this.wmsLayer.alpha = 0.7;
-                */
-            };
-            return WmsPointsService;
-        }());
-        pointsService.WmsPointsService = WmsPointsService;
-        angular
-            .module('explorer.rockproperties.wmspoints', [])
-            .factory("wmsPointsService", ["$rootScope", "gwsUtilService", "rocksConfigService", "wmsInspectorState",
-            function ($rootScope, gwsUtilService, rocksConfigService, wmsInspectorState) {
-                return new rpComponents.pointsService.WmsPointsService($rootScope, gwsUtilService, rocksConfigService, wmsInspectorState);
-            }])
-            .controller("rocksWmsPointsCtrl", RocksWmsPointsCtrl)
-            .directive("rocksWmsPointsLegend", function () {
-            return {
-                templateUrl: 'rockprops/wms-points-panel.html',
-                controller: RocksWmsPointsCtrl,
-                controllerAs: 'rocksWmsPointsVM'
-            };
-        });
-    })(pointsService = rpComponents.pointsService || (rpComponents.pointsService = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/browser.d.ts" />
-/// <reference path="../leaflet/clusters" />
-/// <reference path="../leaflet/wms-inspector" />
-/// <reference path="wms-points" />
-var rpComponents;
-(function (rpComponents) {
-    var controlPanel;
-    (function (controlPanel) {
-        'use strict';
-        var RocksPanelCtrl = (function () {
-            function RocksPanelCtrl($scope, rocksPanelService, wmsInspectorService) {
-                var _this = this;
-                this.$scope = $scope;
-                this.rocksPanelService = rocksPanelService;
-                this.wmsInspectorService = wmsInspectorService;
-                this.targetPanel = '';
-                this.$scope.$on("rocks.accordion.update", function (event, data) {
-                    _this.targetPanel = data;
-                });
-            }
-            RocksPanelCtrl.prototype.setTargetPanel = function (targetPanel) {
-                this.targetPanel = (this.targetPanel != targetPanel) ? targetPanel : "";
-            };
-            RocksPanelCtrl.$inject = ["$scope", "rocksPanelService", "wmsInspectorService"];
-            return RocksPanelCtrl;
-        }());
-        controlPanel.RocksPanelCtrl = RocksPanelCtrl;
-        var RocksPanelService = (function () {
-            function RocksPanelService($rootScope, clusterService, wmsPointsService, rocksConfigService) {
-                this.$rootScope = $rootScope;
-                this.clusterService = clusterService;
-                this.wmsPointsService = wmsPointsService;
-                this.rocksConfigService = rocksConfigService;
-                this.clustersEnabled = false;
-                this.pointsEnabled = false;
-            }
-            /**
-             *
-             * The entry point for the component.
-             *
-             * @param map
-             * @param clusterServiceUrl
-             * @param wmsServiceUrl
-             * @param pickEnabled
-             */
-            RocksPanelService.prototype.init = function (map, config) {
-                this.map = map;
-                this.rocksConfigService.setConfig(config, map);
-            };
-            RocksPanelService.prototype.toggleClusters = function () {
-                this.clustersEnabled = this.clusterService.toggleClusters();
-            };
-            RocksPanelService.prototype.togglePoints = function () {
-                this.pointsEnabled = this.wmsPointsService.togglePoints();
-            };
-            RocksPanelService.$inject = [
-                "$rootScope",
-                "clusterService",
-                "wmsPointsService",
-                "rocksConfigService"
-            ];
-            return RocksPanelService;
-        }());
-        controlPanel.RocksPanelService = RocksPanelService;
-        angular
-            .module('explorer.rockproperties.controlpanel', [])
-            .factory("rocksPanelService", [
-            "$rootScope", "clusterService", "wmsPointsService", "rocksConfigService",
-            function ($rootScope, clusterService, wmsPointsService, rocksConfigService) {
-                return new rpComponents.controlPanel.RocksPanelService($rootScope, clusterService, wmsPointsService, rocksConfigService);
-            }
-        ])
-            .controller("rocksPanelCtrl", RocksPanelCtrl)
-            .directive("rocksControlPanel", function () {
-            return {
-                templateUrl: 'rockprops/control-panel.html',
-                controller: RocksPanelCtrl,
-                controllerAs: 'controlPanelVM'
-            };
-        });
-    })(controlPanel = rpComponents.controlPanel || (rpComponents.controlPanel = {}));
-})(rpComponents || (rpComponents = {}));
-/// <reference path="../../typings/browser.d.ts" />
-/// <reference path="query-builder-export" />
-/// <reference path="cluster-filters" />
-/// <reference path="control-panel" />
-/// <reference path="control-panel" />
-var rpComponents;
-(function (rpComponents) {
-    var clipShipService;
-    (function (clipShipService) {
-        'use strict';
-        var RocksClipShipCtrl = (function () {
-            function RocksClipShipCtrl($scope, $timeout, rocksClipShipService, rocksPanelService, rocksFiltersService, rocksQueryBuilderExport) {
-                this.$scope = $scope;
-                this.$timeout = $timeout;
-                this.rocksClipShipService = rocksClipShipService;
-                this.rocksPanelService = rocksPanelService;
-                this.rocksFiltersService = rocksFiltersService;
-                this.rocksQueryBuilderExport = rocksQueryBuilderExport;
-            }
-            RocksClipShipCtrl.prototype.startClipShip = function () {
-                var _this = this;
-                this.$timeout(function () {
-                    _this.rocksClipShipService.step = 'download';
-                    _this.rocksQueryBuilderExport.startClipShip(_this.rocksFiltersService.exportProperties.filterOptions, _this.rocksClipShipService.targetFormat, _this.rocksClipShipService.targetExtent);
-                });
-            };
-            RocksClipShipCtrl.$inject = [
-                "$scope",
-                "$timeout",
-                "rocksClipShipService",
-                "rocksPanelService",
-                "rocksFiltersService",
-                "rocksQueryBuilderExport"
-            ];
-            return RocksClipShipCtrl;
-        }());
-        clipShipService.RocksClipShipCtrl = RocksClipShipCtrl;
-        var RocksClipShipService = (function () {
-            function RocksClipShipService($rootScope, rocksFiltersService, rocksConfigService) {
-                var _this = this;
-                this.$rootScope = $rootScope;
-                this.rocksFiltersService = rocksFiltersService;
-                this.rocksConfigService = rocksConfigService;
-                this.step = "startDraw";
-                this.isDrawing = false;
-                this.$inject = [
-                    "$rootScope",
-                    "rocksFiltersService",
-                    "rocksConfigService"
-                ];
-                this.$rootScope.$on("rocks.config.ready", function () {
-                    _this.exportFormats = _this.rocksConfigService.config.geoserverWfsExportFormats;
-                });
-                this.$rootScope.$on("rocks.extent.ready", function (event, data) {
-                    _this.step = "selectFeatures";
-                    _this.targetExtent = data;
-                });
-            }
-            /**
-             * broadcast event to trigger draw, and return extent
-             */
-            RocksClipShipService.prototype.startDraw = function () {
-                this.isDrawing = true;
-                this.$rootScope.$broadcast("draw.extent.start", "rocks.extent.ready");
-            };
-            RocksClipShipService.prototype.openGeoserver = function () {
-                var win = window.open(this.rocksConfigService.config.geoserverDashboardUrl, '_blank');
-                if (win) {
-                    win.focus();
-                }
-            };
-            RocksClipShipService.prototype.updateExportFormat = function (format) {
-                this.targetFormat = format;
-            };
-            return RocksClipShipService;
-        }());
-        clipShipService.RocksClipShipService = RocksClipShipService;
-        angular
-            .module('explorer.rockproperties.clipship', [])
-            .factory("rocksClipShipService", ["$rootScope", "rocksFiltersService", "rocksConfigService",
-            function ($rootScope, rocksFiltersService, rocksConfigService) {
-                return new rpComponents.clipShipService.RocksClipShipService($rootScope, rocksFiltersService, rocksConfigService);
-            }
-        ])
-            .controller("rocksClipShipCtrl", RocksClipShipCtrl)
-            .directive("rocksClipShip", function () {
-            return {
-                templateUrl: 'rockprops/clip-ship.html',
-                controller: RocksClipShipCtrl,
-                controllerAs: 'rocksClipShipVM'
-            };
-        })
-            .filter('noClipSelected', [function ($filter) {
-                return function (features) {
-                    if (!features)
-                        return;
-                    for (var i = 0; i < features.length; i++) {
-                        if (features[i].isSelected)
-                            return false;
-                    }
-                    return true;
-                };
-            }]);
-    })(clipShipService = rpComponents.clipShipService || (rpComponents.clipShipService = {}));
 })(rpComponents || (rpComponents = {}));
 angular.module("explorer.rockproperties.templates", []).run(["$templateCache", function ($templateCache) {
         $templateCache.put("rockprops/clip-ship.html", "\r\n<div ng-show=\"rocksClipShipVM.rocksClipShipService.step == \'startDraw\'\">\r\n	<h6 class=\"dis-inline\">\r\n		1.\r\n		<button ng-click=\"rocksClipShipVM.rocksClipShipService.startDraw()\" style=\"padding: 5px 10px;border-radius: 3px;border: none;\">\r\n			Click here\r\n		</button>\r\n		to select an area on the map <i class=\"fa fa-scissors\" style=\"font-size: 16px;\"></i></h6>\r\n</div>\r\n\r\n\r\n<div ng-show=\"rocksClipShipVM.rocksClipShipService.step == \'selectFeatures\'\">\r\n\r\n	<h6 class=\"dis-inline\">2. Select features to download:</h6>\r\n\r\n	<div>\r\n\r\n		<!-- if we have active property filters, use them instead -->\r\n		<p ng-show=\"hasAnyFilter\">\r\n			<i class=\"fa fa-info-circle\"></i> Current filters will be applied to the exported data.\r\n		</p>\r\n\r\n		<div ng-hide=\"hasAnyFilter\">\r\n\r\n			<div style=\"padding: 5px; margin-top: 10px; background: #f0f0f0; border-radius: 3px;\">\r\n				<label>\r\n					<input\r\n						type=\"checkbox\"\r\n						ng-model=\"masterCheck\"\r\n						ng-disabled=\"hasPropertyFilter\"\r\n						ng-change=\"rocksClipShipVM.rocksFiltersService.setAllExportSelected(masterCheck)\" />\r\n					{{ masterCheck ? \'Deselect\' : \'Select\' }} All\r\n				</label>\r\n			</div>\r\n\r\n			<label style=\"margin-left: 25px;\" class=\"checkbox\" ng-repeat=\"property in rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions\">\r\n				<input\r\n					type=\"checkbox\"\r\n					value=\"property.isSelected\"\r\n					ng-model=\"property.isSelected\"\r\n					ng-checked=\"masterCheck\"\r\n					ng-disabled=\"hasPropertyFilter\">\r\n				{{ property.name }}\r\n			</label>\r\n\r\n		</div>\r\n\r\n		<div style=\"margin: 20px 0px 20px 0px;\">\r\n			<label title=\"Export Format\">Export Format</label>\r\n			<select ng-change=\"rocksClipShipVM.rocksClipShipService.updateExportFormat(exportFormats.SelectedOption)\"\r\n					ng-model=\"exportFormats.SelectedOption\"\r\n					name=\"format\"\r\n					ng-options=\"option for option in rocksClipShipVM.rocksClipShipService.exportFormats\"\r\n					ng-class=\"form-control\"\r\n					class=\"filter-input\"\r\n					style=\"float: right; width: 160px;\">\r\n				<option value=\"\" class=\"\">--select--</option>\r\n			</select>\r\n		</div>\r\n\r\n		<a ng-click=\"rocksClipShipVM.rocksClipShipService.openGeoserver()\" style=\"font-size: 11px; margin-top: 20px; color: blue; text-decoration: underline;\">\r\n			More Options via GeoServer Dashboard\r\n		</a>\r\n\r\n		<div style=\"margin-top: 20px;\">\r\n			<button\r\n				type=\"button\"\r\n				class=\"btn btn-default\"\r\n				ng-click=\"rocksClipShipVM.rocksClipShipService.step = \'startDraw\'; rocksClipShipVM.rocksClipShipService.isDrawing = false\"\r\n				title=\"Cancel Download\"\r\n				style=\"width: 40%; float: left;\">Cancel</button>\r\n			<button\r\n				type=\"button\"\r\n				class=\"btn btn-default focusMe\"\r\n				ng-click=\"rocksClipShipVM.startClipShip()\"\r\n				style=\"width: 40%; float: right\"\r\n				title=\"Select one or more reference feature classes before continuing.\"\r\n				ng-disabled=\"(rocksClipShipVM.rocksFiltersService.exportProperties.filterOptions | noClipSelected) || (!rocksClipShipVM.rocksClipShipService.targetFormat)\">Next</button>\r\n		</div>\r\n\r\n	</div>\r\n\r\n</div>\r\n\r\n<div ng-show=\"rocksClipShipVM.rocksClipShipService.step == \'download\'\">\r\n\r\n	<h6>3. Data Export:</h6>\r\n\r\n	<div ng-hide=\"rocksClipShipVM.rocksQueryBuilderExport.loading\">\r\n\r\n		<p ng-show=\"rocksClipShipVM.rocksClipShipService.targetFormat === \'application/json\'\" style=\"margin-top: 40px;\">\r\n			<i class=\"fa fa-info-circle\"></i> Once json has loaded, save page as a .json file.\r\n		</p>\r\n\r\n		<p class=\"warning-block\" style=\"margin-top: 20px;\">\r\n			<i class=\"fa fa-info-circle\"></i> Large data sets may take several minutes to export.\r\n		</p>\r\n\r\n		<a\r\n			class=\"btn btn-default\"\r\n			target=\"_blank\"\r\n			href=\"{{rocksClipShipVM.rocksQueryBuilderExport.exportUrl}}\"\r\n			ng-click=\"rocksClipShipVM.rocksClipShipService.step = \'startDraw\'; rocksClipShipVM.rocksClipShipService.isDrawing = false\"\r\n			style=\"width: 100%; margin-top: 30px;\"\r\n			role=\"button\">\r\n			<i class=\"fa fa-download\"></i> Download {{ rocksClipShipVM.rocksClipShipService.targetFormat }}\r\n		</a>\r\n\r\n		<a\r\n			class=\"btn btn-default\"\r\n			href=\"javascript:;\"\r\n			ng-click=\"rocksClipShipVM.rocksClipShipService.step = \'selectFeatures\'\"\r\n			style=\"width: 100%; margin-top: 10px;\"\r\n			role=\"button\">\r\n			<i class=\"fa fa-arrow-left\"></i> Back\r\n		</a>\r\n\r\n	</div>\r\n\r\n</div>\r\n\r\n<div id=\"rock-clip-ship-loading\" ng-show=\"rocksClipShipVM.rocksQueryBuilderExport.loading\">\r\n	<p>Preparing Data..</p>\r\n</div>");

@@ -7,7 +7,7 @@ module rpComponents.config {
     export interface IRocksConfigService {
         config: any;
         map: any;
-        setConfig(config: any, viewer: any): void;
+        setConfig(config: any, map: any): void;
     }
 
     export class RocksConfigService implements IRocksConfigService {
