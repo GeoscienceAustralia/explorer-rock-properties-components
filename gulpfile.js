@@ -22,7 +22,7 @@ gulp.task('lint', function() {
 });
 
 // Concatenate & Minify JS
-gulp.task('commonScripts', function() {
+gulp.task('scripts', function() {
     return gulp.src('src/components/**/*.ts')
         .pipe(addStream.obj(prepareTemplates()))
         .pipe(sourceMaps.init())
@@ -30,34 +30,10 @@ gulp.task('commonScripts', function() {
             noImplicitAny: true,
             target: 'ES5',
             suppressImplicitAnyIndexErrors: true,
-            out: 'lib-common-rock-properties.js'
-        }))
-        .pipe(gulp.dest('dist'));
-});
-
-// Concatenate & Minify JS
-gulp.task('leaflet', function() {
-    return gulp.src('src/leaflet/**/*.ts')
-        .pipe(sourceMaps.init())
-        .pipe(ts({
-            noImplicitAny: true,
-            target: 'ES5',
-            suppressImplicitAnyIndexErrors: true,
-            out: 'lib-leaflet-rock-properties.js'
-        }))
-        .pipe(gulp.dest('dist'));
-});
-
-gulp.task('concatLeaflet', ['commonScripts'], function() {
-   return gulp.src('src/leaflet/**/*.ts')
-        .pipe(ts({
-            noImplicitAny: true,
-            target: 'ES5',
-            suppressImplicitAnyIndexErrors: true,
-            out: 'explorer-rock-properties-leaflet-components.js'
+            out: 'explorer-rock-properties-components.js'
         }))
         .pipe(gulp.dest('dist'))
-        .pipe(rename('explorer-rock-properties-leaflet-components.min.js'))
+        .pipe(rename('explorer-rock-properties-components.min.js'))
         .pipe(uglify())
         .pipe(sourceMaps.write('.'))
         .pipe(gulp.dest('dist'));
@@ -66,9 +42,9 @@ gulp.task('concatLeaflet', ['commonScripts'], function() {
 // Watch Files For Changes
 gulp.task('watch', function() {
     // We'll watch JS, SCSS and HTML files.
-    gulp.watch('src/leaflet/**/*.ts', ['lint', 'leaflet']);
+    gulp.watch('src/**/*.ts', ['lint', 'scripts']);
     gulp.watch('src/components/**/*(*.ts|*.html)', ['lint', 'leaflet']);
-	 gulp.watch('src/templates/*.html', ['lint', 'leaflet']);
+	 gulp.watch('src/templates/*.html', ['lint', 'scripts']);
     gulp.watch('src/scss/*.scss', ['sass', 'concatCss', 'cssNano']);
     gulp.watch('dist/*', ['moveIt']);
 });
@@ -103,7 +79,7 @@ gulp.task('resources', function () {
 });
 
 // Default Task
-gulp.task('default', ['lint', 'commonScripts', 'sass', 'concatCss', 'cssNano', 'resources', 'watch']);
+gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'cssNano', 'resources', 'watch']);
 
 function prepareTemplates() {
    return gulp.src('src/templates/**/*.html')
