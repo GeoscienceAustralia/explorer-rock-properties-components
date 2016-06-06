@@ -1,6 +1,9 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="../components/control-panel" />
+/// <reference path="../components/charts" />
 
-declare var Cesium: any, ga: any;
+
+declare var ga: any;
 
 module rpComponents.clusterInspector {
 
@@ -64,7 +67,7 @@ module rpComponents.clusterInspector {
         // TODO decide reasonable step size when plugged into real service
         public maxListStep: number = 100;
 
-        viewer: any;
+        map: any;
         serviceUrl: string;
         pickHandler: any;
         pickHandlerAction: any;
@@ -104,18 +107,18 @@ module rpComponents.clusterInspector {
         /**
          *
          
-         * @param viewer
+         * @param map
          * @param summaryService
          * @param usePicking
          */
         init(): void {
 
-            this.viewer = this.rocksConfigService.viewer;
+            this.map = this.rocksConfigService.map;
             this.serviceUrl = this.rocksConfigService.config.rocksServiceUrl;
 
             // setup our pick handler
             if(this.rocksConfigService.config.useClusterPicking){
-
+               /*
                 this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
                 this.pickHandlerAction = (movement: any) => {
 
@@ -141,6 +144,7 @@ module rpComponents.clusterInspector {
                         }
                     }
                 };
+                */
             }
         }
 
@@ -168,8 +172,8 @@ module rpComponents.clusterInspector {
 
             var args: string =
                 '?zoom='+this.zoomLevelService.nextIndex +
-                '&x='+ Cesium.Math.toDegrees(this.targetPos.longitude) +
-                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude) +
+                '&x='+ this.targetPos.longitude +
+                '&y='+ this.targetPos.latitude +
                 this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'query' + args;
@@ -222,8 +226,8 @@ module rpComponents.clusterInspector {
                 '?zoom='+this.zoomLevelService.nextIndex +
                 '&maxCount='+this.maxListStep +
                 '&startIndex='+ this.listIndex +
-                '&x='+ Cesium.Math.toDegrees(this.targetPos.longitude) +
-                '&y='+ Cesium.Math.toDegrees(this.targetPos.latitude) +
+                '&x='+ this.targetPos.longitude +
+                '&y='+ this.targetPos.latitude +
                 this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'features' + args;
@@ -269,10 +273,10 @@ module rpComponents.clusterInspector {
         setPickEnabled(enabled: boolean): void {
 
             if(enabled){
-                this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                //this.pickHandler.setInputAction(this.pickHandlerAction, Cesium.ScreenSpaceEventType.LEFT_CLICK);
             }
             else {
-                this.pickHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                //this.pickHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
             }
         }
 
@@ -286,7 +290,7 @@ module rpComponents.clusterInspector {
 
             if(attributes && highlight){
                 attributes.prevColor = attributes.color;
-                attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(Cesium.Color.fromCssColorString('#ff00ff').withAlpha(1));
+                attributes.color = '#ff00ff';
             }
         }
 

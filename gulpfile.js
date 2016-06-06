@@ -16,13 +16,13 @@ var cssNano     = require('gulp-cssnano');
 
 // Lint Task
 gulp.task('lint', function() {
-    return gulp.src('src/components/**/*.ts')
+    return gulp.src('src/(components|leaflet)/**/*.ts')
         .pipe(tslint())
         .pipe(tslint.report('default'));
 });
 
 // Concatenate & Minify JS
-gulp.task('scripts', function() {
+gulp.task('commonScripts', function() {
     return gulp.src('src/components/**/*.ts')
         .pipe(addStream.obj(prepareTemplates()))
         .pipe(sourceMaps.init())
@@ -30,10 +30,34 @@ gulp.task('scripts', function() {
             noImplicitAny: true,
             target: 'ES5',
             suppressImplicitAnyIndexErrors: true,
-            out: 'explorer-rock-properties-components.js'
+            out: 'lib-common-rock-properties.js'
+        }))
+        .pipe(gulp.dest('dist'));
+});
+
+// Concatenate & Minify JS
+gulp.task('leaflet', function() {
+    return gulp.src('src/leaflet/**/*.ts')
+        .pipe(sourceMaps.init())
+        .pipe(ts({
+            noImplicitAny: true,
+            target: 'ES5',
+            suppressImplicitAnyIndexErrors: true,
+            out: 'lib-leaflet-rock-properties.js'
+        }))
+        .pipe(gulp.dest('dist'));
+});
+
+gulp.task('concatLeaflet', ['commonScripts'], function() {
+   return gulp.src('src/leaflet/**/*.ts')
+        .pipe(ts({
+            noImplicitAny: true,
+            target: 'ES5',
+            suppressImplicitAnyIndexErrors: true,
+            out: 'explorer-rock-properties-leaflet-components.js'
         }))
         .pipe(gulp.dest('dist'))
-        .pipe(rename('explorer-rock-properties-components.min.js'))
+        .pipe(rename('explorer-rock-properties-leaflet-components.min.js'))
         .pipe(uglify())
         .pipe(sourceMaps.write('.'))
         .pipe(gulp.dest('dist'));
@@ -42,19 +66,20 @@ gulp.task('scripts', function() {
 // Watch Files For Changes
 gulp.task('watch', function() {
     // We'll watch JS, SCSS and HTML files.
-    gulp.watch('src/components/**/*(*.ts|*.html)', ['lint', 'scripts']);
-	gulp.watch('src/templates/*.html', ['lint', 'scripts']);
+    gulp.watch('src/leaflet/**/*.ts', ['lint', 'leaflet']);
+    gulp.watch('src/components/**/*(*.ts|*.html)', ['lint', 'leaflet']);
+	 gulp.watch('src/templates/*.html', ['lint', 'leaflet']);
     gulp.watch('src/scss/*.scss', ['sass', 'concatCss', 'cssNano']);
     gulp.watch('dist/*', ['moveIt']);
 });
 
 gulp.task('moveIt', function () {
-	//gulp.src('dist/*')
-	//	.pipe(gulp.dest('../explorer-rock-properties/src/main/webapp/rock-properties/bower_components/explorer-rock-properties-components/dist'));
+	return gulp.src('dist/*')
+		.pipe(gulp.dest('../explorer-rock-properties/src/main/webapp/rock-properties/bower_components/explorer-rock-properties-components/dist'));
 });
 
 gulp.task('sass', function () {
-	gulp.src('src/scss/*.scss')
+	return gulp.src('src/scss/*.scss')
 		.pipe(sass().on('error', sass.logError))
 		.pipe(gulp.dest('src/css'));
 });
@@ -78,7 +103,7 @@ gulp.task('resources', function () {
 });
 
 // Default Task
-gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'cssNano', 'resources', 'watch']);
+gulp.task('default', ['lint', 'commonScripts', 'sass', 'concatCss', 'cssNano', 'resources', 'watch']);
 
 function prepareTemplates() {
    return gulp.src('src/templates/**/*.html')

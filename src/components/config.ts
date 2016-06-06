@@ -1,4 +1,4 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../typings/browser.d.ts" />
 
 module rpComponents.config {
 
@@ -6,14 +6,14 @@ module rpComponents.config {
 
     export interface IRocksConfigService {
         config: any;
-        viewer: any;
+        map: any;
         setConfig(config: any, viewer: any): void;
     }
 
     export class RocksConfigService implements IRocksConfigService {
 
         public config: any;
-        public viewer: any;
+        public map: any;
 
         static $inject = [
             "$rootScope"
@@ -22,9 +22,9 @@ module rpComponents.config {
             public $rootScope: ng.IRootScopeService
         ){}
 
-        setConfig(config: any, viewer: any): void {
+        setConfig(config: any, map: any): void {
             this.config = config;
-            this.viewer = viewer;
+            this.map = map;
             this.$rootScope.$broadcast("rocks.config.ready");
         }
     }

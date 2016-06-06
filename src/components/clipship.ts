@@ -1,6 +1,7 @@
-/// <reference path="../../typings/tsd.d.ts" />
-
-declare var Cesium: any;
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="query-builder-export" />
+/// <reference path="cluster-filters" />
+/// <reference path="control-panel" />
 
 module rpComponents.clipShipService {
 

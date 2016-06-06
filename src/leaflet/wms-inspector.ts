@@ -1,6 +1,9 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="../components/spinner" />
+/// <reference path="../components/clipship" />
 
-declare var Cesium: any, ga: any;
+
+declare var ga: any;
 
 module rpComponents.wmsInspectorService {
 
@@ -64,8 +67,8 @@ module rpComponents.wmsInspectorService {
             this.$rootScope.$on("viewer.click.left", (event: any, data: any) => {
 
                 data.degrees = {
-                    lat: Cesium.Math.toDegrees(data.cartographic.latitude),
-                    lon: Cesium.Math.toDegrees(data.cartographic.longitude)
+                    lat: data.cartographic.latitude,
+                    lon: data.cartographic.longitude
                 };
 
                 // TODO should flasher for this so user knows why
@@ -82,9 +85,7 @@ module rpComponents.wmsInspectorService {
 
                     this.wmsInspectorState.targetGeom = data;
                     this.wmsInspectorState.view = "LAYERSELECT";
-                    this.wmsInspectorState.cameraHeight = Cesium.Ellipsoid.WGS84.cartesianToCartographic(
-                        this.rocksConfigService.viewer.camera.position
-                    ).height;
+                    this.wmsInspectorState.cameraHeight = 0;
                 }
 
             });

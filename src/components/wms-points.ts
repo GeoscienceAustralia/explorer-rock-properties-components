@@ -1,6 +1,9 @@
-/// <reference path="../../typings/tsd.d.ts" />
-
-declare var Cesium: any;
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="config" />
+/// <reference path="../components/control-panel" />
+/// <reference path="../leaflet/wms-inspector" />
+/// <reference path="../leaflet/wms-inspector-state" />
+/// <reference path="gws-util" />
 
 module rpComponents.pointsService {
 
@@ -28,7 +31,7 @@ module rpComponents.pointsService {
     export class WmsPointsService implements IWmsPointsService {
 
         layers: [any];
-        viewer: any;
+        map: any;
         restrictedBounds: any;
         wmsServiceUrl: string;
         wmsLayer: any;
@@ -59,8 +62,8 @@ module rpComponents.pointsService {
         public init(): void{
 
             this.wmsServiceUrl = this.rocksConfigService.config.geoserverWmsUrl;
-            this.viewer = this.rocksConfigService.viewer;
-            this.restrictedBounds = Cesium.Rectangle.fromDegrees(109, -45, 158, -8);
+            this.map = this.rocksConfigService.map;
+            this.restrictedBounds = [109, -45, 158, -8];
 
             // build our legend param string from config
             this.legendParamString = "?";
@@ -81,9 +84,7 @@ module rpComponents.pointsService {
             this.pointsVisible = !this.pointsVisible;
             if(this.wmsLayer){
                 this.wmsLayer.show = this.pointsVisible;
-            }
-            // init
-            else {
+            } else {
                 this.updatePointsLayer();
             }
             return this.pointsVisible;
@@ -118,12 +119,19 @@ module rpComponents.pointsService {
             }
 
             if(this.wmsLayer){
-                this.viewer.imageryLayers.remove(this.wmsLayer);
+                this.map.remove(this.wmsLayer);
             }
 
             ga('send', 'event', 'explorer-rock-properties', 'click', 'update wms points layer: '+targetLayers.toString());
 
-            this.wmsLayer = this.viewer.imageryLayers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
+            this.wmsLayer = L.tileLayer.wms(this.wmsServiceUrl, {
+                layers: targetLayers.toString(),
+                transparent: true,
+                format: 'image/png'
+            });
+            this.map.addLayer(this.wmsLayer);
+            
+/*            this.wmsLayer = this.viewer.imageryLayers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
                 url : this.wmsServiceUrl,
                 layers: targetLayers.toString(),
                 rectangle: this.restrictedBounds,
@@ -134,6 +142,7 @@ module rpComponents.pointsService {
                 enablePickFeatures: false
             }));
             this.wmsLayer.alpha = 0.7;
+*/           
         }
     }
 

@@ -1,10 +1,10 @@
 {
   "name": "ExplorerRockPropertiesComponents",
   "version": "0.0.1-SNAPSHOT",
-  "description": "Explorer Rock Properties Components for CesiumJS",
+  "description": "Explorer Rock Properties Components for Leaflet",
   "keywords": [
     "Angular",
-    "Cesium",
+    "Leaflet",
     "TypeScript",
     "Explorer",
     "Map",

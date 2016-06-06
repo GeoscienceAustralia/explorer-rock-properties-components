@@ -1,4 +1,8 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="clipship" />
+/// <reference path="config" />
+/// <reference path="spinner" />
+/// <reference path="gws-util" />
 
 declare var JSZip: any;
 declare var saveAs: any;

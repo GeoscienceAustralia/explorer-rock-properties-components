@@ -1,12 +1,12 @@
 {
   "name": "explorer-rock-properties-components",
   "version": "0.0.1-SNAPSHOT",
-  "description": "Explorer Rock Properties Components for CesiumJS",
+  "description": "Explorer Rock Properties Components for Leaflet",
   "keywords": [
     "angularjs",
     "javascript",
     "typescript",
-    "cesium"
+    "leaflet"
   ],
   "main": [
     "dist/explorer-rock-properties-components.css",
@@ -29,12 +29,14 @@
     "gulpfile.js",
     "package.json",
     "bower.json",
-	"screenshots"
+    "screenshots"
   ],
   "dependencies": {
-    "cesiumjs": "1.20.x",
     "jszip": "~2.5.0",
     "file-saver.js": "~1.20150507.2",
-    "d3": "~3.5.10"
+    "d3": "~3.5.10",
+    "ga-explorer-map-components": "ssh://git@github.com/GeoscienceAustralia/explorer-map-components.git#master",
+    "Leaflet.label": "~0.2.1",
+    "leaflet-plugins": "~1.6.1"
   }
 }

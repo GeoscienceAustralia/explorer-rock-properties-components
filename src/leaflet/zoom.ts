@@ -1,6 +1,4 @@
-/// <reference path="../../typings/tsd.d.ts" />
-
-declare var Cesium: any;
+/// <reference path="../../typings/browser.d.ts" />
 
 /**
  *
@@ -13,7 +11,7 @@ module rpComponents.zoom {
     'use strict';
 
     export interface IZoomLevelService {
-        viewer: any;
+        map: L.Map;
         zoomLevels: any;
         nextPosition: any;
         previousPosition: any;
@@ -29,7 +27,7 @@ module rpComponents.zoom {
 
     export class ZoomLevelService implements IZoomLevelService {
 
-        viewer: any;
+        map: any;
 
         zoomLevels: any = [
             5000,
@@ -71,7 +69,7 @@ module rpComponents.zoom {
             public rocksConfigService: rpComponents.config.IRocksConfigService
         ) {
             this.$rootScope.$on('rocks.config.ready', () => {
-                this.viewer = this.rocksConfigService.viewer;
+                this.map = this.rocksConfigService.map;
             });
         }
         
@@ -79,7 +77,7 @@ module rpComponents.zoom {
            return this.getIndex(this.nextPosition.height);
         }
         public moveEndHandler = () => {
-            this.nextPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position);
+            this.nextPosition = this.map;
             // changed indexes or exceed threshold for pan, trigger recluster
             if((this.previousPosition.height > -1 && this.getIndex(this.previousPosition.height) != this.nextIndex) || 
                (Math.abs(this.nextPosition.latitude - this.previousPosition.latitude) > 0.01 / this.nextIndex ||
@@ -89,7 +87,7 @@ module rpComponents.zoom {
                 this.$rootScope.$broadcast('rocks.clusters.update', this.nextIndex);
             }
 
-            console.log("INDEX = " + this.nextIndex + " HEIGHT = " + Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position).height);
+            console.log("INDEX = " + this.nextIndex);
 
             this.previousPosition = this.nextPosition;
         };
@@ -111,14 +109,7 @@ module rpComponents.zoom {
         }
 
         public setActive(active:boolean) {
-            if(active) {
-                // TODO extent
-                this.nextPosition = this.previousPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(this.viewer.camera.position);
-                this.viewer.camera.moveEnd.addEventListener(this.moveEndHandler);
-            }
-            else {
-                this.viewer.camera.moveEnd.removeEventListener(this.moveEndHandler);
-            }
+           console.log("setActive called");
         }
 
         /**
@@ -130,44 +121,8 @@ module rpComponents.zoom {
          * @returns {any}
          */
         public getViewExtent(offset: number){
-
-            var ellipsoid = Cesium.Ellipsoid.WGS84;
-            var pixelRatio = window.devicePixelRatio || 1;
-
-            var c2 = new Cesium.Cartesian2(-offset, -offset);
-            var leftTop = this.viewer.scene.camera.pickEllipsoid(c2, ellipsoid);
-
-            c2 = new Cesium.Cartesian2(
-                (this.viewer.scene.canvas.width / pixelRatio) + offset,
-                (this.viewer.scene.canvas.height / pixelRatio) + offset
-            );
-
-            var rightDown = this.viewer.scene.camera.pickEllipsoid(c2, ellipsoid);
-            if(leftTop != null && rightDown != null){
-
-                leftTop = ellipsoid.cartesianToCartographic(leftTop);
-                rightDown = ellipsoid.cartesianToCartographic(rightDown);
-
-                // sometimes at a certain camera pos/zoom, the canvas corners effectively disappear over
-                // the horizon and wrap around the globe, while still passing as a valid rectangle
-                if(leftTop.longitude > rightDown.longitude){
-                    return this.defaultExtent;
-                }
-
-                return {
-                    west: Cesium.Math.toDegrees(leftTop.longitude),
-                    south: Cesium.Math.toDegrees(rightDown.latitude),
-                    east: Cesium.Math.toDegrees(rightDown.longitude),
-                    north: Cesium.Math.toDegrees(leftTop.latitude)
-                };
-            }
-
-            // The sky is visible, fallback to default
-            else {
-                return this.defaultExtent;
-            }
+           return 0; 
         }
-
     }
 
     angular

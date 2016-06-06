@@ -1,4 +1,5 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="../leaflet/clusters.ts" />
 
 declare var d3: any;
 

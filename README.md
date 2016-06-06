@@ -1,6 +1,6 @@
 # explorer-rock-properties-components
 
-AngularJS components related to rock properties, for use with CesiumJS.<br/>
+AngularJS components related to rock properties, for use with Leaflet.<br/>
 **This project is under development, and not ready for use.**
 
 Potential functionality:
@@ -25,9 +25,9 @@ $ gulp
 
 # Usage
 
-`rocksPanelService.init(viewer, config)` is the entry point for the component.
+`rocksPanelService.init(map, config)` is the entry point for the component.
 
-It should be initialised with a <a href="https://cesiumjs.org/Cesium/Build/Documentation/Viewer.html">CesiumJS Viewer</a>, and a JSON config object for service endpoints/params.
+It should be initialised with a JSON config object for service endpoints/params.
 
 Example config:
 
@@ -69,7 +69,7 @@ Example config:
 This component uses:
 
 <ul>
-	<li><a href="http://cesiumjs.org/">CesiumJS</a></li>
+	<li><a href="http://leafletjs.com/">Leaflet JS</a></li>
 	<li><a href="http://d3js.org/">D3.js</a></li>
 	<li><a href="http://fortawesome.github.io/Font-Awesome/">Font Awesome icons</a></li>
 	<li><a href="https://stuk.github.io/jszip/">JSZIP</a></li>

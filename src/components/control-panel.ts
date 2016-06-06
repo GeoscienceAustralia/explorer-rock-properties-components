@@ -1,6 +1,7 @@
-/// <reference path="../../typings/tsd.d.ts" />
-
-declare var Cesium: any;
+/// <reference path="../../typings/browser.d.ts" />
+/// <reference path="../leaflet/clusters" />
+/// <reference path="../leaflet/wms-inspector" />
+/// <reference path="wms-points" />
 
 module rpComponents.controlPanel {
 
@@ -30,14 +31,14 @@ module rpComponents.controlPanel {
     }
 
     export interface IRocksPanelService {
-        viewer: any;
+        map: any;
         clustersEnabled: boolean;
         pointsEnabled: boolean;
         toggleClusters(): void;
     }
     export class RocksPanelService implements IRocksPanelService {
 
-        viewer: any;
+        map: any;
         clustersEnabled: boolean = false;
         pointsEnabled: boolean = false;
 
@@ -58,14 +59,14 @@ module rpComponents.controlPanel {
          *
          * The entry point for the component.
          *
-         * @param viewer
+         * @param map
          * @param clusterServiceUrl
          * @param wmsServiceUrl
          * @param pickEnabled
          */
-        public init(viewer: any, config: any){
-            this.viewer = viewer;
-            this.rocksConfigService.setConfig(config, viewer);
+        public init(map: any, config: any){
+            this.map = map;
+            this.rocksConfigService.setConfig(config, map);
         }
 
         public toggleClusters(): void {
