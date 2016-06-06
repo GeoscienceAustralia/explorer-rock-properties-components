@@ -50,8 +50,8 @@ gulp.task('watch', function() {
 });
 
 gulp.task('moveIt', function () {
-	return gulp.src('dist/*')
-		.pipe(gulp.dest('../explorer-rock-properties/src/main/webapp/rock-properties/bower_components/explorer-rock-properties-components/dist'));
+//	return gulp.src('dist/*')
+//		.pipe(gulp.dest('../explorer-rock-properties/src/main/webapp/rock-properties/bower_components/explorer-rock-properties-components/dist'));
 });
 
 gulp.task('sass', function () {
@@ -79,7 +79,7 @@ gulp.task('resources', function () {
 });
 
 // Default Task
-gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'cssNano', 'resources', 'watch']);
+gulp.task('default', ['lint', 'scripts', 'sass', 'concatCss', 'cssNano', 'resources', 'moveIt', 'watch']);
 
 function prepareTemplates() {
    return gulp.src('src/templates/**/*.html')
