@@ -5,6 +5,7 @@
     "jquery": "github:DefinitelyTyped/DefinitelyTyped/jquery/jquery.d.ts#473d37ca81c8d572d90925887baf5c619465c9a3",
     "angular": "github:DefinitelyTyped/DefinitelyTyped/angularjs/angular.d.ts#473d37ca81c8d572d90925887baf5c619465c9a3",
     "leaflet": "github:DefinitelyTyped/DefinitelyTyped/leaflet/leaflet.d.ts#a44529fcb1e1cdc0355e71c42a6048de99b57c34",
+    "geojson": "github:DefinitelyTyped/DefinitelyTyped/geojson/geojson.d.ts#fc341765ebbb04b7109981a25dced01f488f4d94",
     "leaflet-label": "github:DefinitelyTyped/DefinitelyTyped/leaflet-label/leaflet-label.d.ts#a44529fcb1e1cdc0355e71c42a6048de99b57c34"
   }
 }

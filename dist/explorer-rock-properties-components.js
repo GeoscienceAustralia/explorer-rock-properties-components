@@ -1399,6 +1399,7 @@ var rpComponents;
                 this.clusterInspectorService = clusterInspectorService;
                 this.clusterFilterState = clusterFilterState;
                 this.sequence = 0;
+                this.showClusters = false;
                 this.clusterFilter = '';
                 /**
                  *
@@ -1414,66 +1415,83 @@ var rpComponents;
                     _this.init();
                 });
             }
+            ClusterService.prototype._refreshClusters = function () {
+                var _this = this;
+                if (this.layer) {
+                    this.map.removeLayer(this.layer);
+                    this.layer = null;
+                }
+                var instanceSequence = ++this.sequence;
+                var zoom = this.map.getZoom();
+                var bounds = this.map.getBounds();
+                var parms = [];
+                parms.push("xmin=" + Math.max(bounds.getWest() - 20 / Math.pow(zoom, 1.2), -180));
+                +parms.push("xmax=" + Math.min(bounds.getEast() + 20 / Math.pow(zoom, 1.2), 180));
+                parms.push("ymin=" + Math.max(bounds.getSouth() - 10 / Math.pow(zoom, 1.2), -90));
+                parms.push("ymax=" + Math.min(bounds.getNorth() + 10 / Math.pow(zoom, 1.2), 90));
+                parms.push("zoom=" + (Math.max(zoom, 2)));
+                var geojsonMarkerOptions = {
+                    radius: 8,
+                    fillColor: "#ff0000",
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                };
+                this.$http.get(this.serviceUrl + "summary?" + parms.join("&")).then(function (result) {
+                    if (instanceSequence < _this.sequence) {
+                        return;
+                    }
+                    var maxRadius = Math.sqrt(d3.max(result.data.features, function (item) {
+                        return item.properties.count;
+                    }));
+                    _this.layer = null;
+                    _this.layer = L.geoJson(result.data, {
+                        pointToLayer: function (feature, latlng) {
+                            var geojsonMarkerOptions = {
+                                radius: 4 + 20 / maxRadius * Math.sqrt(feature.properties.count),
+                                fillColor: "#ff0000",
+                                color: "#000",
+                                weight: 1,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            };
+                            var marker = L.circleMarker(latlng, geojsonMarkerOptions)
+                                .bindLabel("" + feature.properties.count, { noHide: true });
+                            marker.on("click", function () {
+                                var id = this.feature.id.split("/");
+                                //		    		     	rocks3dNavigatorService.to({
+                                //		    		     		zoom: id[0],
+                                //		    		     		x: id[1],
+                                //		    		     		y: id[2]
+                                //		    		     	})
+                            });
+                            return marker;
+                        }
+                    });
+                    _this.layer.addTo(_this.map);
+                });
+            };
             ClusterService.prototype.init = function () {
+                var self = this;
                 this.map.on('zoomend', movePan);
                 this.map.on('dragend', movePan);
                 function movePan(event) {
-                    if (this.layer) {
-                        this.map.removeLayer(this.layer);
-                        this.layer = null;
+                    if (!self.showClusters) {
+                        return;
                     }
-                    var instanceSequence = ++this.sequence;
-                    var zoom = this.map.getZoom();
-                    var bounds = this.map.getBounds();
-                    var parms = [];
-                    parms.push("xmin=" + Math.max(bounds.getWest() - 20 / Math.pow(zoom, 1.2), -180));
-                    +parms.push("xmax=" + Math.min(bounds.getEast() + 20 / Math.pow(zoom, 1.2), 180));
-                    parms.push("ymin=" + Math.max(bounds.getSouth() - 10 / Math.pow(zoom, 1.2), -90));
-                    parms.push("ymax=" + Math.min(bounds.getNorth() + 10 / Math.pow(zoom, 1.2), 90));
-                    parms.push("zoom=" + (Math.max(zoom, 2)));
-                    var geojsonMarkerOptions = {
-                        radius: 8,
-                        fillColor: "#ff7800",
-                        color: "#000",
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    };
-                    this.$http.get(this.serviceUrl + "?" + parms.join("&")).then(function (result) {
-                        if (instanceSequence < this.sequence) {
-                            return;
-                        }
-                        var maxRadius = Math.sqrt(d3.max(result.data.features, function (item) {
-                            return item.properties.count;
-                        }));
-                        this.layer = L.geoJson(result.data, {
-                            pointToLayer: function (feature, latlng) {
-                                var geojsonMarkerOptions = {
-                                    radius: 4 + 20 / maxRadius * Math.sqrt(feature.properties.count),
-                                    fillColor: "#ff7800",
-                                    color: "#000",
-                                    weight: 1,
-                                    opacity: 1,
-                                    fillOpacity: 0.8
-                                };
-                                var marker = L.circleMarker(latlng, geojsonMarkerOptions)
-                                    .bindLabel("" + feature.properties.count, { noHide: true });
-                                marker.on("click", function () {
-                                    var id = this.feature.id.split("/");
-                                    //		    		        	rocks3dNavigatorService.to({
-                                    //		    		        		zoom: id[0],
-                                    //		    		        		x: id[1],
-                                    //		    		        		y: id[2]
-                                    //		    		        	})
-                                });
-                                return marker;
-                            }
-                        }).addTo(this.map);
-                    });
+                    self._refreshClusters();
                 }
             };
             ClusterService.prototype.toggleClusters = function () {
-                return true;
+                if (this.showClusters = !this.showClusters) {
+                    this._refreshClusters();
+                }
+                else if (this.layer) {
+                    this.map.removeLayer(this.layer);
+                    this.layer = null;
+                }
+                return this.showClusters;
             };
             ClusterService.$inject = [
                 "$http",

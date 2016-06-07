@@ -34,6 +34,7 @@ module rpComponents.clusterService {
        private map: L.Map;
        private serviceUrl: string;
        private sequence: number = 0;
+       private showClusters = false;
        clusterFilter: string = '';
 
        static $inject = [
@@ -65,75 +66,91 @@ module rpComponents.clusterService {
           });
        }
 
+       private _refreshClusters() {
+         if(this.layer) {
+		 	  this.map.removeLayer(this.layer);
+		 	  this.layer = null;
+		   }
+		    	
+		   var instanceSequence = ++this.sequence;
+		   var zoom = this.map.getZoom();
+		   var bounds = this.map.getBounds();
+		   var parms: string[] = [];
+		   parms.push("xmin=" + Math.max(bounds.getWest() - 20/Math.pow(zoom, 1.2), -180)); + 
+		   parms.push("xmax=" + Math.min(bounds.getEast() + 20/Math.pow(zoom, 1.2), 180));
+		   parms.push("ymin=" + Math.max(bounds.getSouth() - 10/Math.pow(zoom, 1.2), -90));
+		   parms.push("ymax=" + Math.min(bounds.getNorth() + 10/Math.pow(zoom, 1.2), 90)); 
+		   parms.push("zoom=" + (Math.max(zoom, 2)));
+		    	
+		   var geojsonMarkerOptions = {
+		      radius: 8,
+		      fillColor: "#ff0000",
+		      color: "#000",
+		      weight: 1,
+		      opacity: 1,
+		      fillOpacity: 0.8
+		   };		    	
+		    	
+		   this.$http.get(this.serviceUrl + "summary?" + parms.join("&")).then((result: any) => {
+		   	if(instanceSequence < this.sequence) {
+		   		return;
+		   	}
+		   	var maxRadius = Math.sqrt(d3.max(result.data.features, function(item: any) {
+		   		return item.properties.count;
+		   	}));
+		    	this.layer =null
+             
+             	
+		   	this.layer = L.geoJson(result.data, {
+		   	   pointToLayer: function (feature, latlng) {
+		   		  	var geojsonMarkerOptions = {
+		    		  	    radius: 4 + 20/maxRadius * Math.sqrt(feature.properties.count),
+		    		  	    fillColor: "#ff0000",
+		    		  	    color: "#000",
+		    		  	    weight: 1,
+		    		  	    opacity: 1,
+		    		  	    fillOpacity: 0.8
+		    		  	};
+		    		   var marker = L.circleMarker(latlng, geojsonMarkerOptions)
+		    		        	.bindLabel("" + feature.properties.count, { noHide: true });
+		    		        
+		    		   marker.on("click", function() {
+		    		     	var id = this.feature.id.split("/");
+		    		        	
+//		    		     	rocks3dNavigatorService.to({
+//		    		     		zoom: id[0],
+//		    		     		x: id[1],
+//		    		     		y: id[2]
+//		    		     	})
+		    		   });
+		    		   return marker;
+		    		}
+		      });
+            this.layer.addTo(this.map);
+		    });
+       }
+
        init():void {
+          var self = this;
           this.map.on('zoomend', movePan);
           this.map.on('dragend', movePan);
 
 		    function movePan(event: any) {
-		       if(this.layer) {
-		    		 this.map.removeLayer(this.layer);
-		    		 this.layer = null;
-		    	  }
-		    	
-		    	  var instanceSequence = ++this.sequence;
-		    	  var zoom = this.map.getZoom();
-		    	  var bounds = this.map.getBounds();
-		    	  var parms: string[] = [];
-		    	  parms.push("xmin=" + Math.max(bounds.getWest() - 20/Math.pow(zoom, 1.2), -180)); + 
-		    	  parms.push("xmax=" + Math.min(bounds.getEast() + 20/Math.pow(zoom, 1.2), 180));
-		    	  parms.push("ymin=" + Math.max(bounds.getSouth() - 10/Math.pow(zoom, 1.2), -90));
-		    	  parms.push("ymax=" + Math.min(bounds.getNorth() + 10/Math.pow(zoom, 1.2), 90)); 
-		    	  parms.push("zoom=" + (Math.max(zoom, 2)));
-		    	
-		    	  var geojsonMarkerOptions = {
-		    		    radius: 8,
-		    		    fillColor: "#ff7800",
-		    		    color: "#000",
-		    		    weight: 1,
-		    		    opacity: 1,
-		    		    fillOpacity: 0.8
-		    	  };
-		    	
-		    	
-		    	this.$http.get(this.serviceUrl + "?" + parms.join("&")).then(function(result: any) {
-		    		if(instanceSequence < this.sequence) {
-		    			return;
-		    		}
-		    		var maxRadius = Math.sqrt(d3.max(result.data.features, function(item: any) {
-		    			return item.properties.count;
-		    		}));
-		    		
-		    		this.layer = L.geoJson(result.data, {
-		    		    pointToLayer: function (feature, latlng) {
-		    		    	var geojsonMarkerOptions = {
-		    		    	    radius: 4 + 20/maxRadius * Math.sqrt(feature.properties.count),
-		    		    	    fillColor: "#ff7800",
-		    		    	    color: "#000",
-		    		    	    weight: 1,
-		    		    	    opacity: 1,
-		    		    	    fillOpacity: 0.8
-		    		    	};
-		    		        var marker = L.circleMarker(latlng, geojsonMarkerOptions)
-		    		        	.bindLabel("" + feature.properties.count, { noHide: true });
-		    		        
-		    		        marker.on("click", function() {
-		    		        	var id = this.feature.id.split("/");
-		    		        	
-//		    		        	rocks3dNavigatorService.to({
-//		    		        		zoom: id[0],
-//		    		        		x: id[1],
-//		    		        		y: id[2]
-//		    		        	})
-		    		        });
-		    		        return marker;
-		    		    }
-		    		}).addTo(this.map);
-		    	});
+             if(!self.showClusters) {
+                return;
+             }
+             self._refreshClusters();
 		    }			
        }
         
        toggleClusters(): boolean {
-          return true;
+          if(this.showClusters = !this.showClusters) {
+              this._refreshClusters();
+          } else if(this.layer) {
+		 	     this.map.removeLayer(this.layer);
+		 	     this.layer = null;
+		    }  
+          return this.showClusters;
        }
 
 
