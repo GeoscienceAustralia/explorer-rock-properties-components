@@ -8,8 +8,7 @@
 		<label>
 			<input
 				type="checkbox"
-				ng-model="rocksWmsPointsVM.wmsPointsService.masterChecked"
-				ng-change="rocksWmsPointsVM.wmsPointsService.toggleChecked()"
+				ng-bind="rocksWmsPointsVM.wmsPointsService.masterChecked"
 				ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled"/>
 			{{ rocksWmsPointsVM.wmsPointsService.masterChecked ? 'Deselect' : 'Select' }} all layers
 		</label>

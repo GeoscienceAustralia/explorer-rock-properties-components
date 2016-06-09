@@ -1,11 +1,9 @@
-
 <div ng-show="wmsInspectorVM.wmsInspectorState.view == 'INTRO'">
 	<div ng-if="wmsInspectorVM.wmsInspectorService.inspectorEnabled">Click the map to get feature info.</div>
 	<div ng-if="!wmsInspectorVM.wmsInspectorService.inspectorEnabled">Enable WMS Inspector to interrogate WMS layers.</div>
 </div>
 
 <div ng-show="wmsInspectorVM.wmsInspectorState.view == 'LAYERSELECT'">
-
 	<p style="margin: 10px 0px;" tooltip="Approx 30m accuracy">
 		Select a layer to query:
 		<code>
@@ -14,16 +12,14 @@
 		</code>
 	</p>
 
-	<a
-		class="btn btn-default"
+	<a class="btn btn-default"
 		style="width: 100%; margin: 2px 0px"
 		ng-click="wmsInspectorVM.wmsInspectorService.queryRocks()"
 		href="javascript:;">
 		Rock Properties Data
 	</a>
 
-	<a
-		ng-repeat="feature in wmsInspectorVM.wmsInspectorService.features"
+	<a ng-repeat="feature in wmsInspectorVM.wmsInspectorService.features"
 		class="btn btn-default"
 	   	style="width: 100%; margin: 2px 0px"
 	   	ng-click="wmsInspectorVM.wmsInspectorService.queryFeature(feature)"
@@ -38,18 +34,15 @@
 		<i class="fa fa-times fa-lg"></i>
 		Cancel
 	</a>
-
 </div>
 
 
 <div ng-show="wmsInspectorVM.wmsInspectorState.view == 'FEATUREINFO'">
-
 	<div ng-show="wmsInspectorVM.wmsInspectorService.isLoading">
 		<div id="rocks-inspector-loading"></div>
 	</div>
 
 	<div ng-hide="wmsInspectorVM.wmsInspectorService.isLoading">
-
 		<p style="margin: 10px 0px;" tooltip="Approx 30m accuracy">
 			Feature Info for:
 			<code>
@@ -60,11 +53,9 @@
 
 		<!-- put html here.. -->
 		<div ng-bind-html="wmsInspectorVM.wmsInspectorService.featureInfo"></div>
-
 	</div>
 
 	<div>
-
 		<a class="btn btn-default"
 		   style="width: 49%; margin-top: 20px"
 		   ng-click="wmsInspectorVM.wmsInspectorState.view = 'LAYERSELECT'"
@@ -82,5 +73,4 @@
 		</a>
 
 	</div>
-
 </div>

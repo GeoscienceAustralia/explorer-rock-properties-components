@@ -35,24 +35,24 @@ angular.module("explorer.rockproperties.mapevents", [
 				makeMarker(geojson);
 			});
 		}
-
+        
 		function makeMarker(data: any) {
-      mapService.getMap().then(function(map: any) {
-	  		if(marker) {
-	  			map.removeLayer(marker);
-  			}
-				if(!data) {
+         mapService.getMap().then(function(map: any) {
+	  		 if(marker) {
+	  		 	  map.removeLayer(marker);
+  			 }
+			 if(!data) {
 					return;
-				}
+          }
 
-			  let point: any;
-			  if(typeof data.properties.SAMPLE_LONGITUDE != "undefined") {
-				  point= {
-					  type: "Point",
+			 let point: any;
+			 if(typeof data.properties.SAMPLE_LONGITUDE != "undefined") {
+			    point= {
+				   type: "Point",
 					  coordinates: [
 						  data.properties.SAMPLE_LONGITUDE,
-					  	data.properties.SAMPLE_LATITUDE
-	  				]
+					  	  data.properties.SAMPLE_LATITUDE
+	  				  ]
 	  			};
 	  		} else {
 	  			point = data.geometry;

@@ -80,10 +80,13 @@ module rpComponents.pointsService {
         }
 
         public togglePoints(): boolean {
-
             this.pointsVisible = !this.pointsVisible;
-            if(this.wmsLayer){
-                this.wmsLayer.show = this.pointsVisible;
+            if(this.wmsLayer) {
+                if(this.pointsVisible) {
+                   this.map.addLayer(this.wmsLayer);
+                } else {
+                   this.map.removeLayer(this.wmsLayer);
+                }
             } else {
                 this.updatePointsLayer();
             }
@@ -110,16 +113,15 @@ module rpComponents.pointsService {
         }
 
         updatePointsLayer(): void{
-
             var targetLayers: any = [];
             for(var legend in this.legendData){
-                if (this.legendData.hasOwnProperty(legend) && this.legendData[legend]['isSelected'] === true) {
+                if (this.legendData[legend] && this.legendData[legend]['isSelected'] === true) {
                     targetLayers.push(legend);
                 }
             }
 
             if(this.wmsLayer){
-                this.map.remove(this.wmsLayer);
+                this.map.removeLayer(this.wmsLayer);
             }
 
             ga('send', 'event', 'explorer-rock-properties', 'click', 'update wms points layer: '+targetLayers.toString());
@@ -130,19 +132,6 @@ module rpComponents.pointsService {
                 format: 'image/png'
             });
             this.map.addLayer(this.wmsLayer);
-            
-/*            this.wmsLayer = this.viewer.imageryLayers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
-                url : this.wmsServiceUrl,
-                layers: targetLayers.toString(),
-                rectangle: this.restrictedBounds,
-                parameters : {
-                    transparent : 'true',
-                    format : 'image/png'
-                },
-                enablePickFeatures: false
-            }));
-            this.wmsLayer.alpha = 0.7;
-*/           
         }
     }
 

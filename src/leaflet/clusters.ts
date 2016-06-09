@@ -76,11 +76,11 @@ module rpComponents.clusterService {
 		   var zoom = this.map.getZoom();
 		   var bounds = this.map.getBounds();
 		   var parms: string[] = [];
-		   parms.push("xmin=" + Math.max(bounds.getWest() - 20/Math.pow(zoom, 1.2), -180)); + 
-		   parms.push("xmax=" + Math.min(bounds.getEast() + 20/Math.pow(zoom, 1.2), 180));
-		   parms.push("ymin=" + Math.max(bounds.getSouth() - 10/Math.pow(zoom, 1.2), -90));
-		   parms.push("ymax=" + Math.min(bounds.getNorth() + 10/Math.pow(zoom, 1.2), 90)); 
-		   parms.push("zoom=" + (Math.max(zoom, 2)));
+		   parms.push("xmin=" + Math.max(bounds.getWest() - 20/Math.pow(zoom, 1.2), 60)); + 
+		   parms.push("xmax=" + Math.min(bounds.getEast() + 20/Math.pow(zoom, 1.2), 160));
+		   parms.push("ymin=" + Math.max(bounds.getSouth() - 10/Math.pow(zoom, 1.2), -85));
+		   parms.push("ymax=" + Math.min(bounds.getNorth() + 10/Math.pow(zoom, 1.2), 0)); 
+		   parms.push("zoom=" + (Math.max(zoom, 4)));
 		    	
 		   var geojsonMarkerOptions = {
 		      radius: 8,
@@ -90,8 +90,10 @@ module rpComponents.clusterService {
 		      opacity: 1,
 		      fillOpacity: 0.8
 		   };		    	
-		    	
-		   this.$http.get(this.serviceUrl + "summary?" + parms.join("&")).then((result: any) => {
+		   
+         var rootScope = this.$rootScope;
+         		    		        
+		   this.$http.get(this.serviceUrl + "summary?" + parms.join("&") + this.clusterFilterState.filterQuery).then((result: any) => {
 		   	if(instanceSequence < this.sequence) {
 		   		return;
 		   	}
@@ -104,7 +106,7 @@ module rpComponents.clusterService {
 		   	this.layer = L.geoJson(result.data, {
 		   	   pointToLayer: function (feature, latlng) {
 		   		  	var geojsonMarkerOptions = {
-		    		  	    radius: 4 + 20/maxRadius * Math.sqrt(feature.properties.count),
+		    		  	    radius: 5 + 20/maxRadius * Math.sqrt(feature.properties.count),
 		    		  	    fillColor: "#ff0000",
 		    		  	    color: "#000",
 		    		  	    weight: 1,
@@ -113,15 +115,14 @@ module rpComponents.clusterService {
 		    		  	};
 		    		   var marker = L.circleMarker(latlng, geojsonMarkerOptions)
 		    		        	.bindLabel("" + feature.properties.count, { noHide: true });
-		    		        
 		    		   marker.on("click", function() {
 		    		     	var id = this.feature.id.split("/");
-		    		        	
-//		    		     	rocks3dNavigatorService.to({
-//		    		     		zoom: id[0],
-//		    		     		x: id[1],
-//		    		     		y: id[2]
-//		    		     	})
+		    		      
+                     rootScope.$broadcast('rocks.cluster.selected', {
+	     		      	   zoom: id[0],
+	       	   	     	x: id[1],
+	      		        	y: id[2]
+   	    		     	});
 		    		   });
 		    		   return marker;
 		    		}
@@ -161,9 +162,8 @@ module rpComponents.clusterService {
          *
          */
         reCluster = (): void => {
-
+           this._refreshClusters();
         };
-
     }
 
     angular

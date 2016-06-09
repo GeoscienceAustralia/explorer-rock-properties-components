@@ -61,12 +61,14 @@ module rpComponents.clipShipService {
         targetFormat: string;
 
         $inject = [
+            "$timeout",
             "$rootScope",
             "rocksFiltersService",
             "rocksConfigService"
         ];
 
         constructor(
+            public $timeout: ng.ITimeoutService,
             public $rootScope: ng.IRootScopeService,
             public rocksFiltersService: rpComponents.filters.IRocksFiltersService,
             public rocksConfigService: rpComponents.config.IRocksConfigService
@@ -77,8 +79,10 @@ module rpComponents.clipShipService {
             });
 
             this.$rootScope.$on("rocks.extent.ready", (event: any, data: any) => {
-                this.step = "selectFeatures";
-                this.targetExtent = data;
+               this.$timeout(() => {
+                  this.step = "selectFeatures";
+                  this.targetExtent = data;
+               });
             });
         }
 
@@ -104,13 +108,15 @@ module rpComponents.clipShipService {
 
     angular
         .module('explorer.rockproperties.clipship', [])
-        .factory("rocksClipShipService", ["$rootScope", "rocksFiltersService", "rocksConfigService",
+        .factory("rocksClipShipService", ["$timeout", "$rootScope", "rocksFiltersService", "rocksConfigService",
             (
+                $timeout: ng.ITimeoutService,
                 $rootScope: ng.IRootScopeService,
                 rocksFiltersService: rpComponents.filters.IRocksFiltersService,
                 rocksConfigService: rpComponents.config.IRocksConfigService
             ) =>
                 new rpComponents.clipShipService.RocksClipShipService(
+                    $timeout,
                     $rootScope,
                     rocksFiltersService,
                     rocksConfigService

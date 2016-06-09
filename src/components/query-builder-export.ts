@@ -141,11 +141,14 @@ module rpComponents.queryBuilderExport {
         }
 
         buildQuery(properties: any, extent: any, format: string, layerNames: [string]){
-
             var typeNamesQuery: any = this.getTypeNamesQuery(layerNames);
+            var west = extent.getWest();
+            var east = extent.getEast();
+            var north = extent.getNorth();
+            var south = extent.getSouth();
 
             // BBOX and FILTER queries are mutually exclusive, so must use CQL
-            var bboxQuery: string = "&CQL_FILTER=BBOX(GEOM," + extent.west +","+ extent.south +","+ extent.east +","+ extent.north +")";
+            var bboxQuery: string = "&CQL_FILTER=BBOX(GEOM," + west +","+ south +","+ east +","+ north +")";
 
             var filterQuery: string = "";
             var filters: any = {}; // filterState.filters;

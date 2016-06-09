@@ -8,7 +8,6 @@ module rpComponents.wmsInspectorState {
     export interface IWmsInspectorState {
         view: string;
         targetGeom: any;
-        cameraHeight: number;
     }
 
     /*
@@ -21,7 +20,6 @@ module rpComponents.wmsInspectorState {
     export class WmsInspectorState implements IWmsInspectorState {
         public view: string = "INTRO";
         public targetGeom: number;
-        public cameraHeight: number;
     }
 
     angular

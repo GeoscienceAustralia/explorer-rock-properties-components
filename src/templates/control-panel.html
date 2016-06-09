@@ -47,8 +47,7 @@
 		<div class="rocks-toggle-button" title="Show/hide point features WMS layer">
 			<input
 				type="checkbox"
-				ng-model="controlPanelVM.wmsInspectorService.inspectorEnabled"
-				ng-change="controlPanelVM.wmsInspectorService.togglePointInspector()" />
+				ng-model="controlPanelVM.wmsInspectorService.inspectorEnabled" />
 		</div>
 		<div class="title" ng-click="controlPanelVM.setTargetPanel('wmsInspector')">
 			<i class="fa fa-{{ controlPanelVM.targetPanel == 'wmsInspector' ? 'minus' : 'plus' }}"></i>

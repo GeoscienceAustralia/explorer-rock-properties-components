@@ -112,39 +112,22 @@ module rpComponents.clusterInspector {
          * @param usePicking
          */
         init(): void {
-
             this.map = this.rocksConfigService.map;
             this.serviceUrl = this.rocksConfigService.config.rocksServiceUrl;
 
             // setup our pick handler
             if(this.rocksConfigService.config.useClusterPicking){
-               /*
-                this.pickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
-                this.pickHandlerAction = (movement: any) => {
-
-                    var pick = this.viewer.scene.pick(movement.position);
-
-                    if (Cesium.defined(pick) && Cesium.defined(pick.id) && pick.id.hasOwnProperty('properties') && pick.id.properties.featureType == 'rockPropsCluster') {
-
-                        this.listReady = false;
-                        this.clearHighlighted();
-                        this.targetId = pick.id;
-                        this.setHighlighted(this.targetId, true);
-
-                        this.targetPos =  Cesium.Ellipsoid.WGS84.cartesianToCartographic(
-                            this.viewer.camera.pickEllipsoid(movement.position)
-                        );
-
-                        if(this.inspectMode == "CHART"){
-                            this.chartClusterQuery();
-                        }
-                        else {
-                            this.listIndex = 0;
-                            this.listClusterQuery();
-                        }
-                    }
-                };
-                */
+               this.$rootScope.$on('rocks.cluster.selected', (event: any, data: any) => {
+                  this.targetPos = data;
+                        
+                  this.listReady = false;
+                  if(this.inspectMode == "CHART"){
+                     this.chartClusterQuery();
+                  } else {
+                     this.listIndex = 0;
+                     this.listClusterQuery();
+                  }
+               });
             }
         }
 
@@ -171,9 +154,9 @@ module rpComponents.clusterInspector {
             }
 
             var args: string =
-                '?zoom='+this.zoomLevelService.nextIndex +
-                '&x='+ this.targetPos.longitude +
-                '&y='+ this.targetPos.latitude +
+                '/'+this.targetPos.zoom +
+                '/'+ this.targetPos.x +
+                '/'+ this.targetPos.y +
                 this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'query' + args;
@@ -223,11 +206,11 @@ module rpComponents.clusterInspector {
             }
 
             var args: string =
-                '?zoom='+this.zoomLevelService.nextIndex +
-                '&maxCount='+this.maxListStep +
+                '/'+this.targetPos.zoom +
+                '/'+ this.targetPos.x +
+                '/'+ this.targetPos.y +
+                '?maxCount='+this.maxListStep +
                 '&startIndex='+ this.listIndex +
-                '&x='+ this.targetPos.longitude +
-                '&y='+ this.targetPos.latitude +
                 this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'features' + args;
@@ -236,29 +219,18 @@ module rpComponents.clusterInspector {
             console.log(query);
 
             this.$http({
-
                 method: 'GET',
-
-                // mock
-                //url: this.serviceUrl + '/mock-feature-list.json'
-
-                // real service
                 url: query
-
             }).then((response: any) => {
-
                 if(response.hasOwnProperty('data')){
-
                     this.$timeout(() => {
-
                         document.getElementById("cluster-result-list-loading").style.display = 'none';
                         this.listReady = true;
 
                         // step, merge features
                         if (this.listIndex != 0) {
                             this.listFeatures.features = this.listFeatures.features.concat(response.data.features);
-                        }
-                        else {
+                        } else {
                             this.listFeatures = response.data;
                         }
                         let morePages = this.listFeatures.features.length < this.listFeatures.totalFeatures;

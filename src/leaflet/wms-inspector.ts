@@ -41,8 +41,10 @@ module rpComponents.wmsInspectorService {
         SURFACE_GEO: string = "GA_Surface_Geology_of_Australia";
 
         $inject = [
+            "$timeout",
             "$rootScope",
             "$http",
+            'mapService',
             "wmsInspectorState",
             "assetsService",
             "configService",
@@ -53,8 +55,10 @@ module rpComponents.wmsInspectorService {
         ];
 
         constructor(
+            public $timeout: ng.ITimeoutService,
             public $rootScope: ng.IRootScopeService,
             public $http: ng.IHttpService,
+            public mapService: any,
             public wmsInspectorState: rpComponents.wmsInspectorState.IWmsInspectorState,
             public assetsService: any,
             public configService: any,
@@ -63,50 +67,54 @@ module rpComponents.wmsInspectorService {
             public gwsUtilService: rpComponents.gwsUtilService.IGwsUtilService,
             public rocksClipShipService: rpComponents.clipShipService.IRocksClipShipService
         ) {
-            // register listener for pointInspector
-            this.$rootScope.$on("viewer.click.left", (event: any, data: any) => {
-
-                data.degrees = {
-                    lat: data.cartographic.latitude,
-                    lon: data.cartographic.longitude
-                };
-
-                // TODO should flasher for this so user knows why
-                // (we don't want inspector interuppting clipship drawing)
-                if(this.rocksClipShipService.isDrawing){
-                    return;
-                }
-
-                if(this.inspectorEnabled && data.hasOwnProperty('cartographic')){
-
-                    // make sure panel is visible
-                    this.$rootScope.$broadcast("rocks.accordion.update", "wmsInspector");
-                    this.$rootScope.$broadcast("toolbar.toggle.update", {linked: false, key: "rocksClusters", isActive: true});
-
-                    this.wmsInspectorState.targetGeom = data;
-                    this.wmsInspectorState.view = "LAYERSELECT";
-                    this.wmsInspectorState.cameraHeight = 0;
-                }
-
-            });
+           var self = this;
 
             this.$rootScope.$on('rocks.config.ready', () => {
+               // load feature classes
+               assetsService.getReferenceFeatureClasses().then((features: any) => {
+                   this.features = features;
+               });
 
-                // load feature classes
-                assetsService.getReferenceFeatureClasses().then((features: any) => {
-                    this.features = features;
-                });
+               // init rocks feature
+               this.rocksFeature = {
+                   wmsUrl: this.rocksConfigService.config.geoserverWmsUrl,
+                   name: 'Rock Properties Layer'
+               }
+           });
+           
+           mapService.getMap().then((map: L.Map) => {
+              map.on('click', mapOn); 
+           });
+           function mapOn(data: any) {
+              if(!self.inspectorEnabled) {
+                 return;
+              }
+              self.$timeout(() => {
+                 data.degrees = {
+                    lat: data.latlng.lat,
+                    lon: data.latlng.lng
+                 };
 
-                // init rocks feature
-                this.rocksFeature = {
-                    wmsUrl: this.rocksConfigService.config.geoserverWmsUrl,
-                    name: 'Rock Properties Layer'
-                }
-            });
+                 // TODO should flasher for this so user knows why
+                 // (we don't want inspector interuppting clipship drawing)
+                 if(self.rocksClipShipService.isDrawing){
+                    return;
+                 }
+
+                 if(data.latlng) {                           
+                    // make sure panel is visible
+                    self.$rootScope.$broadcast("rocks.accordion.update", "wmsInspector");
+                    self.$rootScope.$broadcast("toolbar.toggle.update", {linked: false, key: "rocksClusters", isActive: true});
+
+                    self.wmsInspectorState.targetGeom = data;
+                    self.wmsInspectorState.view = "LAYERSELECT";
+                 }
+              });
+           }         
         }
 
         public togglePointInspector(): void {
-            this.inspectorEnabled != this.inspectorEnabled;
+           this.inspectorEnabled = !this.inspectorEnabled;
         }
 
         // TODO we should restrict the query to visible layers
@@ -126,7 +134,6 @@ module rpComponents.wmsInspectorService {
         }
 
         public queryFeature(feature: any): void {
-
             ga('send', 'event', 'explorer-rock-properties', 'click', 'wms inspector query: '+feature.name);
 
             // set view
@@ -140,20 +147,6 @@ module rpComponents.wmsInspectorService {
             if(targetUrl.indexOf(this.URL_EXCLUDE) > -1){
                 targetUrl = targetUrl.substring(0, (targetUrl.length - this.URL_EXCLUDE.length));
             }
-
-            // surface geology has scale dependencies, so we need to check
-            // zoom (aka camera height) to ensure we query the correct layer
-            if(targetUrl.indexOf(this.SURFACE_GEO) >  -1){
-
-                if(this.wmsInspectorState.cameraHeight <= 340000){
-                    targetLayers = [targetLayers[0]];
-                }
-                else {
-                    targetLayers = [targetLayers[1]];
-                }
-            }
-
-
 
             var queryString =
 
@@ -198,7 +191,6 @@ module rpComponents.wmsInspectorService {
         }
 
         public toggleLoading(): void {
-
             if(this.loadingSpinner){
                 this.isLoading = !this.isLoading;
             }
@@ -219,8 +211,10 @@ module rpComponents.wmsInspectorService {
     angular
         .module('explorer.rockproperties.inspector', [])
         .factory("wmsInspectorService", [
+            "$timeout",
             "$rootScope",
             "$http",
+            "mapService",
             "wmsInspectorState",
             "assetsService",
             "configService",
@@ -228,9 +222,11 @@ module rpComponents.wmsInspectorService {
             "loadingSpinnerService",
             "gwsUtilService",
             "rocksClipShipService",
-            (
+            ( 
+                $timeout: ng.ITimeoutService,
                 $rootScope: ng.IRootScopeService,
                 $http: ng.IHttpService,
+                mapService: any,
                 wmsInspectorState: rpComponents.wmsInspectorState.IWmsInspectorState,
                 assetsService: any,
                 configService: any,
@@ -240,8 +236,10 @@ module rpComponents.wmsInspectorService {
                 rocksClipShipService: rpComponents.clipShipService.IRocksClipShipService
             ) =>
                 new rpComponents.wmsInspectorService.WmsInspectorService(
+                    $timeout,
                     $rootScope,
                     $http,
+                    mapService,
                     wmsInspectorState,
                     assetsService,
                     configService,
