@@ -157,6 +157,7 @@ module rpComponents.clusterInspector {
                 '/'+this.targetPos.zoom +
                 '/'+ this.targetPos.x +
                 '/'+ this.targetPos.y +
+                '?v=1' +
                 this.clusterFilterState.filterQuery;
 
             var query: string = this.serviceUrl + 'query' + args;

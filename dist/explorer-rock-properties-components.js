@@ -104,13 +104,13 @@ var rpComponents;
                 ga('send', 'event', 'explorer-rock-properties', 'click', 'cluster filters applied');
             };
             RocksFiltersService.prototype.buildFilterQuery = function () {
-                var query = '';
+                var query = [];
                 for (var i = 0; i < this.filters.length; i++) {
                     if (this.filters[i].hasOwnProperty('ClusterOption') && this.filters[i].ClusterOption) {
-                        query = query + '&filter=' + encodeURIComponent(this.filters[i].filterType + '=' + this.filters[i].ClusterOption);
+                        query.push('filter=' + encodeURIComponent(this.filters[i].filterType + '=' + this.filters[i].ClusterOption));
                     }
                 }
-                return query;
+                return "&" + query.join("&");
             };
             RocksFiltersService.prototype.clearFilters = function () {
                 for (var i = 0; i < this.filters.length; i++) {
@@ -1143,6 +1143,7 @@ var rpComponents;
                 var args = '/' + this.targetPos.zoom +
                     '/' + this.targetPos.x +
                     '/' + this.targetPos.y +
+                    '?v=1' +
                     this.clusterFilterState.filterQuery;
                 var query = this.serviceUrl + 'query' + args;
                 console.log("query");

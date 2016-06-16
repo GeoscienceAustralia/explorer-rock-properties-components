@@ -102,15 +102,15 @@ module rpComponents.filters {
 
         public buildFilterQuery(): string {
 
-            var query = '';
+            var query: string[] = [];
 
             for(var i = 0; i < this.filters.length; i++){
                 if(this.filters[i].hasOwnProperty('ClusterOption') && this.filters[i].ClusterOption){
-                    query = query + '&filter='+ encodeURIComponent(this.filters[i].filterType +'='+ this.filters[i].ClusterOption);
+                    query.push('filter='+ encodeURIComponent(this.filters[i].filterType +'='+ this.filters[i].ClusterOption));
                 }
             }
 
-            return query;
+            return "&" + query.join("&");
         }
 
         public clearFilters(): void {
