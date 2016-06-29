@@ -882,6 +882,7 @@ var rpComponents;
             WmsPointsService.prototype.init = function () {
                 var _this = this;
                 this.wmsServiceUrl = this.rocksConfigService.config.geoserverWmsUrl;
+                this.defaultWmsLayers = this.rocksConfigService.config.defaultWmsLayers ? this.rocksConfigService.config.defaultWmsLayers : [];
                 this.map = this.rocksConfigService.map;
                 this.restrictedBounds = [109, -45, 158, -8];
                 // build our legend param string from config
@@ -911,37 +912,57 @@ var rpComponents;
                 }
                 return this.pointsVisible;
             };
-            WmsPointsService.prototype.toggleChecked = function () {
-                this.masterChecked != this.masterChecked;
-                for (var legend in this.legendData) {
-                    this.legendData[legend]['isSelected'] = this.masterChecked;
-                }
+            WmsPointsService.prototype.someChecked = function () {
+                var checked = false;
+                angular.forEach(this.legendData, function (layer) {
+                    checked = layer.isSelected || checked;
+                });
+                return checked;
+            };
+            WmsPointsService.prototype.deselectLayers = function () {
+                angular.forEach(this.legendData, function (layer) {
+                    layer.isSelected = false;
+                });
+                this.updatePointsLayer();
+            };
+            WmsPointsService.prototype.toggleLayer = function (name) {
+                this.updatePointsLayer();
             };
             WmsPointsService.prototype.getLegendData = function () {
                 this.legendData = {};
                 for (var i = 0; i < this.layers.length; i++) {
                     this.legendData[this.layers[i]] = {
                         legendUrl: this.wmsServiceUrl + this.legendParamString + this.layers[i],
-                        isSelected: true
+                        isSelected: isSelected(this.layers[i], this.defaultWmsLayers)
                     };
+                }
+                function isSelected(name, layers) {
+                    if (layers.length) {
+                        // Tempted to use array indexOf but got scared someone may try port this to something really old.
+                        var findIn = layers.join(",");
+                        return findIn.indexOf(name) > -1;
+                    }
+                    else {
+                        return true;
+                    }
                 }
             };
             WmsPointsService.prototype.updatePointsLayer = function () {
                 var targetLayers = [];
                 for (var legend in this.legendData) {
                     if (this.legendData[legend] && this.legendData[legend]['isSelected'] === true) {
-                        targetLayers.push(legend);
+                        targetLayers.push(L.tileLayer.wms(this.wmsServiceUrl, {
+                            layers: legend,
+                            transparent: true,
+                            format: 'image/png'
+                        }));
                     }
                 }
                 if (this.wmsLayer) {
                     this.map.removeLayer(this.wmsLayer);
                 }
                 ga('send', 'event', 'explorer-rock-properties', 'click', 'update wms points layer: ' + targetLayers.toString());
-                this.wmsLayer = L.tileLayer.wms(this.wmsServiceUrl, {
-                    layers: targetLayers.toString(),
-                    transparent: true,
-                    format: 'image/png'
-                });
+                this.wmsLayer = L.layerGroup(targetLayers);
                 this.map.addLayer(this.wmsLayer);
             };
             return WmsPointsService;
@@ -1011,6 +1032,9 @@ var rpComponents;
             RocksPanelService.prototype.init = function (map, config) {
                 this.map = map;
                 this.rocksConfigService.setConfig(config, map);
+                if (config && config.showClustersOnStart && !this.clustersEnabled) {
+                    this.toggleClusters();
+                }
             };
             RocksPanelService.prototype.toggleClusters = function () {
                 this.clustersEnabled = this.clusterService.toggleClusters();
@@ -1465,7 +1489,7 @@ var rpComponents;
                     _this.layer = L.geoJson(result.data, {
                         pointToLayer: function (feature, latlng) {
                             var geojsonMarkerOptions = {
-                                radius: 5 + 20 / maxRadius * Math.sqrt(feature.properties.count),
+                                radius: 6 + 35 / maxRadius * Math.pow(feature.properties.count, 0.4),
                                 fillColor: "#ff0000",
                                 color: "#000",
                                 weight: 1,
@@ -1846,7 +1870,7 @@ angular.module("explorer.rockproperties.templates", []).run(["$templateCache", f
         $templateCache.put("rockprops/cluster-filters.html", "\r\n<!-- TODO plug into rock props filter service -->\r\n\r\n<div ng-hide=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\r\n	Enable Cluster Features to apply filters.\r\n</div>\r\n\r\n<div ng-show=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\r\n\r\n\r\n	<div ng-repeat=\"filter in rocksClusterFilterVM.rocksFiltersService.filters\" style=\"padding-top:7px;position:relative; overflow-x: hidden;overflow-y: auto;\">\r\n\r\n		<label style=\"font-size: 11px;\" title=\"{{filter.filterLabel}}\">{{filter.filterLabel}}</label>\r\n		<select\r\n				ng-model=\"filter.ClusterOption\"\r\n				name=\"filter.filterType\"\r\n				ng-options=\"option as option for option in filter.filterOptions\"\r\n				ng-class=\'form-control\'\r\n				class=\'filter-input\'\r\n				style=\"float:left;width:100%;position:relative;\">\r\n			<option value=\"\" selected>--select--</option>\r\n		</select>\r\n\r\n	</div>\r\n\r\n	<div style=\"text-align: center;\">\r\n		<a class=\"btn btn-default\" style=\"margin: 10px;\" ng-click=\"rocksClusterFilterVM.rocksFiltersService.applyFilters()\" href=\"javascript:;\">\r\n			<i class=\"fa fa-filter fa-lg\"></i>\r\n			Apply\r\n		</a>\r\n\r\n		<a class=\"btn btn-default\" style=\"margin: 10px;\" ng-click=\"rocksClusterFilterVM.rocksFiltersService.clearFilters()\" href=\"javascript:;\">\r\n			<i class=\"fa fa-remove fa-lg\"></i>\r\n			Clear\r\n		</a>\r\n\r\n		<p ng-show=\"filterResultCount()\" style=\"text-align: left; margin: 10px; font-size: 14px;\">\r\n			<strong>Record Count: </strong>\r\n			14320\r\n		</p>\r\n	</div>\r\n\r\n</div>\r\n");
         $templateCache.put("rockprops/cluster-inspector.html", "\r\n<div ng-hide=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\r\n	Enable Cluster Features to use the inspector tool.\r\n</div>\r\n\r\n<div ng-show=\"clusterInspectorVM.rocksPanelService.clustersEnabled\">\r\n\r\n	<p>Click on a cluster to see:</p>\r\n\r\n	<label class=\"radio-inline\">\r\n		<input\r\n			type=\"radio\"\r\n			ng-model=\"clusterInspectorVM.clusterInspectorService.inspectMode\"\r\n			value=\"CHART\"> Summary charts\r\n	</label>\r\n	<label class=\"radio-inline\">\r\n		<input\r\n			type=\"radio\"\r\n			ng-model=\"clusterInspectorVM.clusterInspectorService.inspectMode\"\r\n			value=\"LIST\"> Results list\r\n	</label>\r\n\r\n	<div id=\"cluster-result-list-loading\" style=\"padding-top: 10px; text-align: center;\"></div>\r\n\r\n\r\n	<div ng-show=\"clusterInspectorVM.clusterInspectorService.listReady\">\r\n\r\n		<div ng-if=\"clusterInspectorVM.clusterInspectorService.listFeatures.totalFeatures > 0\" class=\"alert alert-success\" style=\"margin-top: 30px;\">\r\n			Features loaded: {{clusterInspectorVM.clusterInspectorService.pagingState.count}} of \r\n							{{clusterInspectorVM.clusterInspectorService.pagingState.total}}\r\n			<button ng-show=\"clusterInspectorVM.clusterInspectorService.pagingState.more()\"  class=\"undecorated btn-sm\"\r\n					style=\"float:right\" ng-click=\"clusterInspectorVM.clusterInspectorService.loadNextListStep()\">-More-</button>\r\n		</div>\r\n\r\n		<div ng-repeat=\"feature in clusterInspectorVM.clusterInspectorService.listFeatures.features\" class=\"rocks-result-list-feature\">\r\n\r\n			<table class=\"table table-hover table-striped\">\r\n\r\n				<h5>ID: {{feature.id}}</h5>\r\n				<tbody>\r\n					<tr>\r\n						<td><strong>GEOM</strong></td>\r\n						<td>{{feature.geometry.coordinates[0]}}, {{feature.geometry.coordinates[1]}}</td>\r\n					</tr>\r\n					<tr ng-repeat=\"(key, value) in feature.properties\">\r\n						<td><strong>{{key}}</strong></td>\r\n						<td>{{value}}</td>\r\n					</tr>\r\n				</tbody>\r\n\r\n			</table>\r\n		</div>\r\n\r\n		<div ng-show=\"clusterInspectorVM.clusterInspectorService.pagingState.more()\">\r\n			<span>{{clusterInspectorVM.clusterInspectorService.pagingState.count}} of {{clusterInspectorVM.clusterInspectorService.pagingState.total}}</span>\r\n			<span style=\"float:right\">\r\n				<button class=\"undecorated btn-sm\" ng-click=\"clusterInspectorVM.clusterInspectorService.loadNextListStep()\">-More-</button>\r\n			</span>\r\n		</div>\r\n\r\n	</div>\r\n\r\n</div>\r\n");
         $templateCache.put("rockprops/cluster-summary.html", "<div id=\"clusterSummaryChart\" ng-show=\"chartState.targetChartId == \'clusterSummaryChart\'\">\r\n\r\n	<div class=\"btn-group\" style=\"position: absolute;right: 10px;top: 10px;\">\r\n		<button type=\"button\" class=\"btn btn-default\" title=\"Close charts\" ng-click=\"clusterChartVM.clusterChartService.hideChart(); clusterChartVM.clusterService.clearHighlighted();\">\r\n			<i class=\"fa fa-times-circle\" role=\"presentation\" style=\"font-size:16px; color:black\"></i>\r\n		</button>\r\n	</div>\r\n\r\n	<div id=\"cluster-summary-chart-d3\"></div>\r\n	<div id=\"cluster-summary-chart-loading\"></div>\r\n\r\n</div>");
-        $templateCache.put("rockprops/control-panel.html", "<div>\r\n\r\n	<div class=\"rocks-accordion\">\r\n		<div class=\"rocks-toggle-button\" title=\"Show/hide cluster features\">\r\n			<input\r\n				type=\"checkbox\"\r\n				ng-model=\"controlPanelVM.rocksPanelService.clustersEnabled\"\r\n				ng-change=\"controlPanelVM.rocksPanelService.toggleClusters()\" />\r\n		</div>\r\n		<button class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'clusterFeatures\')\">\r\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'clusterFeatures\' ? \'minus\' : \'plus\' }}\"></i>\r\n			Cluster Features\r\n		</button>\r\n	</div>\r\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'clusterFeatures\'\">\r\n\r\n		<uib-tabset active=\"activeJustified\" justified=\"true\">\r\n			<uib-tab index=\"0\" heading=\"Inspect\" style=\"padding: 0px 0px 20px 0px;\">\r\n				<rocks-cluster-inspector-panel></rocks-cluster-inspector-panel>\r\n			</uib-tab>\r\n			<uib-tab index=\"1\" heading=\"Filter\" style=\"padding: 0px 0px 20px 0px;\">\r\n				<rocks-cluster-filters></rocks-cluster-filters>\r\n			</uib-tab>\r\n		</uib-tabset>\r\n\r\n	</div>\r\n\r\n	<div class=\"rocks-accordion\">\r\n		<div class=\"rocks-toggle-button\" title=\"Show/hide point features WMS layer\">\r\n			<input\r\n				type=\"checkbox\"\r\n				ng-model=\"controlPanelVM.rocksPanelService.pointsEnabled\"\r\n				ng-change=\"controlPanelVM.rocksPanelService.togglePoints()\" />\r\n		</div>\r\n		<div class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'pointFeatures\')\">\r\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'pointFeatures\' ? \'minus\' : \'plus\' }}\"></i>\r\n			Point Features (WMS)\r\n		</div>\r\n	</div>\r\n\r\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'pointFeatures\'\">\r\n		<rocks-wms-points-legend></rocks-wms-points-legend>\r\n	</div>\r\n\r\n\r\n	<div class=\"rocks-accordion\">\r\n		<div class=\"rocks-toggle-button\" title=\"Show/hide point features WMS layer\">\r\n			<input\r\n				type=\"checkbox\"\r\n				ng-model=\"controlPanelVM.wmsInspectorService.inspectorEnabled\" />\r\n		</div>\r\n		<div class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'wmsInspector\')\">\r\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'wmsInspector\' ? \'minus\' : \'plus\' }}\"></i>\r\n			WMS Inspector (GetFeatureInfo)\r\n		</div>\r\n	</div>\r\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'wmsInspector\'\">\r\n		<wms-inspector-panel></wms-inspector-panel>\r\n	</div>\r\n\r\n\r\n	<div class=\"rocks-accordion\">\r\n		<div class=\"title w100\" ng-click=\"controlPanelVM.setTargetPanel(\'clipShip\')\">\r\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'clipShip\' ? \'minus\' : \'plus\' }}\"></i>\r\n			Download Rock Property Data\r\n		</div>\r\n	</div>\r\n\r\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'clipShip\'\">\r\n\r\n		<rocks-clip-ship></rocks-clip-ship>\r\n\r\n	</div>\r\n\r\n</div>");
+        $templateCache.put("rockprops/control-panel.html", "<div>\r\n\r\n	<div class=\"rocks-accordion\">\r\n		<div class=\"rocks-toggle-button\" title=\"Show/hide cluster features\">\r\n			<input\r\n				type=\"checkbox\"\r\n				ng-model=\"controlPanelVM.rocksPanelService.clustersEnabled\"\r\n				ng-change=\"controlPanelVM.rocksPanelService.toggleClusters()\" />\r\n		</div>\r\n		<button class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'clusterFeatures\')\">\r\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'clusterFeatures\' ? \'minus\' : \'plus\' }}\"></i>\r\n			Cluster Features\r\n		</button>\r\n	</div>\r\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'clusterFeatures\'\">\r\n\r\n		<uib-tabset active=\"activeJustified\" justified=\"true\">\r\n			<uib-tab index=\"0\" heading=\"Inspect\" style=\"padding: 0px 0px 20px 0px;\">\r\n				<rocks-cluster-inspector-panel></rocks-cluster-inspector-panel>\r\n			</uib-tab>\r\n			<uib-tab index=\"1\" heading=\"Filter\" style=\"padding: 0px 0px 20px 0px;\">\r\n				<rocks-cluster-filters></rocks-cluster-filters>\r\n			</uib-tab>\r\n		</uib-tabset>\r\n\r\n	</div>\r\n\r\n	<div class=\"rocks-accordion\">\r\n		<div class=\"rocks-toggle-button\" title=\"Show/hide point features WMS layer\">\r\n			<input\r\n				type=\"checkbox\"\r\n				ng-model=\"controlPanelVM.rocksPanelService.pointsEnabled\"\r\n				ng-change=\"controlPanelVM.rocksPanelService.togglePoints(); controlPanelVM.rocksPanelService.pointsEnabled && controlPanelVM.setTargetPanel(\'pointFeatures\')\" />\r\n		</div>\r\n		<div class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'pointFeatures\')\">\r\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'pointFeatures\' ? \'minus\' : \'plus\' }}\"></i>\r\n			Point Features (WMS)\r\n		</div>\r\n	</div>\r\n\r\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'pointFeatures\'\">\r\n		<rocks-wms-points-legend></rocks-wms-points-legend>\r\n	</div>\r\n\r\n\r\n	<div class=\"rocks-accordion\">\r\n		<div class=\"rocks-toggle-button\" title=\"Show/hide point features WMS layer\">\r\n			<input\r\n				type=\"checkbox\"\r\n				ng-model=\"controlPanelVM.wmsInspectorService.inspectorEnabled\" />\r\n		</div>\r\n		<div class=\"title\" ng-click=\"controlPanelVM.setTargetPanel(\'wmsInspector\')\">\r\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'wmsInspector\' ? \'minus\' : \'plus\' }}\"></i>\r\n			WMS Inspector (GetFeatureInfo)\r\n		</div>\r\n	</div>\r\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'wmsInspector\'\">\r\n		<wms-inspector-panel></wms-inspector-panel>\r\n	</div>\r\n\r\n\r\n	<div class=\"rocks-accordion\">\r\n		<div class=\"title w100\" ng-click=\"controlPanelVM.setTargetPanel(\'clipShip\')\">\r\n			<i class=\"fa fa-{{ controlPanelVM.targetPanel == \'clipShip\' ? \'minus\' : \'plus\' }}\"></i>\r\n			Download Rock Property Data\r\n		</div>\r\n	</div>\r\n\r\n	<div class=\"rocks-accordion-content\" ng-show=\"controlPanelVM.targetPanel == \'clipShip\'\">\r\n\r\n		<rocks-clip-ship></rocks-clip-ship>\r\n\r\n	</div>\r\n\r\n</div>");
         $templateCache.put("rockprops/wms-inspector-panel.html", "<div ng-show=\"wmsInspectorVM.wmsInspectorState.view == \'INTRO\'\">\r\n	<div ng-if=\"wmsInspectorVM.wmsInspectorService.inspectorEnabled\">Click the map to get feature info.</div>\r\n	<div ng-if=\"!wmsInspectorVM.wmsInspectorService.inspectorEnabled\">Enable WMS Inspector to interrogate WMS layers.</div>\r\n</div>\r\n\r\n<div ng-show=\"wmsInspectorVM.wmsInspectorState.view == \'LAYERSELECT\'\">\r\n	<p style=\"margin: 10px 0px;\" tooltip=\"Approx 30m accuracy\">\r\n		Select a layer to query:\r\n		<code>\r\n			{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lat | number : 2}},\r\n			{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lon | number : 2}}\r\n		</code>\r\n	</p>\r\n\r\n	<a class=\"btn btn-default\"\r\n		style=\"width: 100%; margin: 2px 0px\"\r\n		ng-click=\"wmsInspectorVM.wmsInspectorService.queryRocks()\"\r\n		href=\"javascript:;\">\r\n		Rock Properties Data\r\n	</a>\r\n\r\n	<a ng-repeat=\"feature in wmsInspectorVM.wmsInspectorService.features\"\r\n		class=\"btn btn-default\"\r\n	   	style=\"width: 100%; margin: 2px 0px\"\r\n	   	ng-click=\"wmsInspectorVM.wmsInspectorService.queryFeature(feature)\"\r\n	   	href=\"javascript:;\">\r\n		{{feature.name}}\r\n	</a>\r\n\r\n	<a class=\"btn btn-default\"\r\n	   style=\"width: 100%; margin-top: 20px\"\r\n	   ng-click=\"wmsInspectorVM.wmsInspectorState.view = \'INTRO\'\"\r\n	   href=\"javascript:;\">\r\n		<i class=\"fa fa-times fa-lg\"></i>\r\n		Cancel\r\n	</a>\r\n</div>\r\n\r\n\r\n<div ng-show=\"wmsInspectorVM.wmsInspectorState.view == \'FEATUREINFO\'\">\r\n	<div ng-show=\"wmsInspectorVM.wmsInspectorService.isLoading\">\r\n		<div id=\"rocks-inspector-loading\"></div>\r\n	</div>\r\n\r\n	<div ng-hide=\"wmsInspectorVM.wmsInspectorService.isLoading\">\r\n		<p style=\"margin: 10px 0px;\" tooltip=\"Approx 30m accuracy\">\r\n			Feature Info for:\r\n			<code>\r\n				{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lat | number : 2}},\r\n				{{wmsInspectorVM.wmsInspectorState.targetGeom.degrees.lon | number : 2}}\r\n			</code>\r\n		</p>\r\n\r\n		<!-- put html here.. -->\r\n		<div ng-bind-html=\"wmsInspectorVM.wmsInspectorService.featureInfo\"></div>\r\n	</div>\r\n\r\n	<div>\r\n		<a class=\"btn btn-default\"\r\n		   style=\"width: 49%; margin-top: 20px\"\r\n		   ng-click=\"wmsInspectorVM.wmsInspectorState.view = \'LAYERSELECT\'\"\r\n		   href=\"javascript:;\">\r\n			<i class=\"fa fa-arrow-left fa-lg\"></i>\r\n			Back\r\n		</a>\r\n\r\n		<a class=\"btn btn-default\"\r\n		   style=\"width: 49%; margin-top: 20px\"\r\n		   ng-click=\"wmsInspectorVM.wmsInspectorState.view = \'INTRO\'\"\r\n		   href=\"javascript:;\">\r\n			<i class=\"fa fa-times fa-lg\"></i>\r\n			Cancel\r\n		</a>\r\n\r\n	</div>\r\n</div>");
-        $templateCache.put("rockprops/wms-points-panel.html", "<div ng-hide=\"rocksWmsPointsVM.rocksPanelService.pointsEnabled\">\r\n	Enable Point Features to view layers.\r\n</div>\r\n\r\n<div ng-show=\"rocksWmsPointsVM.rocksPanelService.pointsEnabled\">\r\n\r\n	<div style=\"padding: 5px 10px; margin-left: -10px; background: #f0f0f0; border-radius: 3px;\">\r\n		<label>\r\n			<input\r\n				type=\"checkbox\"\r\n				ng-bind=\"rocksWmsPointsVM.wmsPointsService.masterChecked\"\r\n				ng-disabled=\"!rocksWmsPointsVM.rocksPanelService.pointsEnabled\"/>\r\n			{{ rocksWmsPointsVM.wmsPointsService.masterChecked ? \'Deselect\' : \'Select\' }} all layers\r\n		</label>\r\n	</div>\r\n\r\n	<div ng-repeat=\"legend in rocksWmsPointsVM.wmsPointsService.legendData\" class=\'rocks-points-legend-item\'>\r\n\r\n		<label>\r\n			<input\r\n			type=\"checkbox\"\r\n			ng-model=\"legend.isSelected\" />\r\n			<img ng-src=\"{{legend.legendUrl}}\" alt=\"{{legend}} legend icon\" />\r\n		</label>\r\n\r\n	</div>\r\n\r\n	<a class=\"btn btn-default\"\r\n	   style=\"width: 100%; margin-top: 20px\"\r\n	   ng-click=\"rocksWmsPointsVM.wmsPointsService.updatePointsLayer()\"\r\n	   href=\"javascript:;\">\r\n		<i class=\"fa fa-refresh fa-lg\"></i>\r\n		Update layers\r\n	</a>\r\n\r\n</div>");
+        $templateCache.put("rockprops/wms-points-panel.html", "<div ng-hide=\"rocksWmsPointsVM.rocksPanelService.pointsEnabled\">\r\n	Enable Point Features to view layers.\r\n</div>\r\n\r\n<div ng-show=\"rocksWmsPointsVM.rocksPanelService.pointsEnabled\">\r\n	<label>\r\n		<button class=\"btn btn-default btn-xs\"\r\n            ng-click=\"rocksWmsPointsVM.wmsPointsService.deselectLayers()\"\r\n			   ng-disabled=\"!rocksWmsPointsVM.wmsPointsService.someChecked()\">\r\n		    Deselect all layers\r\n	    </button>\r\n	</label>\r\n\r\n	<div ng-repeat=\"(key, legend) in rocksWmsPointsVM.wmsPointsService.legendData\" class=\'rocks-points-legend-item\'>\r\n\r\n		<label>\r\n			<input type=\"checkbox\"\r\n               ng-click=\"rocksWmsPointsVM.wmsPointsService.toggleLayer(key)\"\r\n			      ng-model=\"legend.isSelected\" />\r\n			<img ng-src=\"{{legend.legendUrl}}\" alt=\"{{legend}} legend icon\" />\r\n		</label>\r\n\r\n	</div>\r\n</div>");
     }]);

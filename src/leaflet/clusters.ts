@@ -106,7 +106,7 @@ module rpComponents.clusterService {
 		   	this.layer = L.geoJson(result.data, {
 		   	   pointToLayer: function (feature, latlng) {
 		   		  	var geojsonMarkerOptions = {
-		    		  	    radius: 5 + 20/maxRadius * Math.sqrt(feature.properties.count),
+		    		  	    radius: 6 + 35/maxRadius * Math.pow(feature.properties.count, 0.4),
 		    		  	    fillColor: "#ff0000",
 		    		  	    color: "#000",
 		    		  	    weight: 1,

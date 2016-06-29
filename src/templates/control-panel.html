@@ -30,7 +30,7 @@
 			<input
 				type="checkbox"
 				ng-model="controlPanelVM.rocksPanelService.pointsEnabled"
-				ng-change="controlPanelVM.rocksPanelService.togglePoints()" />
+				ng-change="controlPanelVM.rocksPanelService.togglePoints(); controlPanelVM.rocksPanelService.pointsEnabled && controlPanelVM.setTargetPanel('pointFeatures')" />
 		</div>
 		<div class="title" ng-click="controlPanelVM.setTargetPanel('pointFeatures')">
 			<i class="fa fa-{{ controlPanelVM.targetPanel == 'pointFeatures' ? 'minus' : 'plus' }}"></i>

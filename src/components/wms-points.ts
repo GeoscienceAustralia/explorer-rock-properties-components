@@ -26,6 +26,8 @@ module rpComponents.pointsService {
         legendData: any;
         init(): void;
         togglePoints(): boolean;
+        deselectLayers(): void;
+        someChecked(): boolean;
     }
 
     export class WmsPointsService implements IWmsPointsService {
@@ -40,6 +42,7 @@ module rpComponents.pointsService {
         masterChecked: boolean = true;
         pointsVisible: boolean;
         legendParamString: string = "";
+        defaultWmsLayers: string[];
 
         $inject = [
             "$rootScope",
@@ -59,9 +62,10 @@ module rpComponents.pointsService {
             });
         }
 
-        public init(): void{
+        public init(): void {
 
             this.wmsServiceUrl = this.rocksConfigService.config.geoserverWmsUrl;
+            this.defaultWmsLayers = this.rocksConfigService.config.defaultWmsLayers?this.rocksConfigService.config.defaultWmsLayers: [];
             this.map = this.rocksConfigService.map;
             this.restrictedBounds = [109, -45, 158, -8];
 
@@ -93,30 +97,54 @@ module rpComponents.pointsService {
             return this.pointsVisible;
         }
 
-        public toggleChecked(): void {
-            this.masterChecked != this.masterChecked;
-            for(var legend in this.legendData){
-                this.legendData[legend]['isSelected'] = this.masterChecked;
-            }
+        public someChecked(): boolean {
+           var checked = false;
+           angular.forEach(this.legendData, (layer: any) => {
+              checked = layer.isSelected || checked; 
+           }); 
+           return checked;      
+        }
+
+        public deselectLayers(): void {
+           angular.forEach(this.legendData, (layer: any) => {
+              layer.isSelected = false; 
+           });
+           this.updatePointsLayer();
+        }
+
+        public toggleLayer(name: string): void {
+           this.updatePointsLayer();
         }
 
         getLegendData(): void{
-
             this.legendData = {};
-            for(var i = 0; i < this.layers.length; i++){
-
+            for(var i = 0; i < this.layers.length; i++) {
                 this.legendData[this.layers[i]] = {
                     legendUrl : this.wmsServiceUrl + this.legendParamString + this.layers[i],
-                    isSelected : true
+                    isSelected : isSelected(this.layers[i], this.defaultWmsLayers)
                 };
+            }
+            
+            function isSelected(name: string, layers: string[]) {
+               if(layers.length) {
+                  // Tempted to use array indexOf but got scared someone may try port this to something really old.
+                  var findIn = layers.join(",");
+                  return findIn.indexOf(name) > -1;
+               } else {
+                  return true;
+               }
             }
         }
 
         updatePointsLayer(): void{
-            var targetLayers: any = [];
+            var targetLayers: L.TileLayer[] = [];
             for(var legend in this.legendData){
                 if (this.legendData[legend] && this.legendData[legend]['isSelected'] === true) {
-                    targetLayers.push(legend);
+                    targetLayers.push(L.tileLayer.wms(this.wmsServiceUrl, {
+                        layers: legend,
+                        transparent: true,
+                        format: 'image/png'
+                     }));
                 }
             }
 
@@ -126,11 +154,7 @@ module rpComponents.pointsService {
 
             ga('send', 'event', 'explorer-rock-properties', 'click', 'update wms points layer: '+targetLayers.toString());
 
-            this.wmsLayer = L.tileLayer.wms(this.wmsServiceUrl, {
-                layers: targetLayers.toString(),
-                transparent: true,
-                format: 'image/png'
-            });
+            this.wmsLayer = L.layerGroup(targetLayers);
             this.map.addLayer(this.wmsLayer);
         }
     }

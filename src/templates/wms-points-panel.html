@@ -3,34 +3,22 @@
 </div>
 
 <div ng-show="rocksWmsPointsVM.rocksPanelService.pointsEnabled">
+	<label>
+		<button class="btn btn-default btn-xs"
+            ng-click="rocksWmsPointsVM.wmsPointsService.deselectLayers()"
+			   ng-disabled="!rocksWmsPointsVM.wmsPointsService.someChecked()">
+		    Deselect all layers
+	    </button>
+	</label>
 
-	<div style="padding: 5px 10px; margin-left: -10px; background: #f0f0f0; border-radius: 3px;">
-		<label>
-			<input
-				type="checkbox"
-				ng-bind="rocksWmsPointsVM.wmsPointsService.masterChecked"
-				ng-disabled="!rocksWmsPointsVM.rocksPanelService.pointsEnabled"/>
-			{{ rocksWmsPointsVM.wmsPointsService.masterChecked ? 'Deselect' : 'Select' }} all layers
-		</label>
-	</div>
-
-	<div ng-repeat="legend in rocksWmsPointsVM.wmsPointsService.legendData" class='rocks-points-legend-item'>
+	<div ng-repeat="(key, legend) in rocksWmsPointsVM.wmsPointsService.legendData" class='rocks-points-legend-item'>
 
 		<label>
-			<input
-			type="checkbox"
-			ng-model="legend.isSelected" />
+			<input type="checkbox"
+               ng-click="rocksWmsPointsVM.wmsPointsService.toggleLayer(key)"
+			      ng-model="legend.isSelected" />
 			<img ng-src="{{legend.legendUrl}}" alt="{{legend}} legend icon" />
 		</label>
 
 	</div>
-
-	<a class="btn btn-default"
-	   style="width: 100%; margin-top: 20px"
-	   ng-click="rocksWmsPointsVM.wmsPointsService.updatePointsLayer()"
-	   href="javascript:;">
-		<i class="fa fa-refresh fa-lg"></i>
-		Update layers
-	</a>
-
 </div>

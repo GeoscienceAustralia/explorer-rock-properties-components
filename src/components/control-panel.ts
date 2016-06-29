@@ -67,6 +67,9 @@ module rpComponents.controlPanel {
         public init(map: any, config: any){
             this.map = map;
             this.rocksConfigService.setConfig(config, map);
+            if(config && config.showClustersOnStart && ! this.clustersEnabled) {
+               this.toggleClusters();
+            } 
         }
 
         public toggleClusters(): void {
