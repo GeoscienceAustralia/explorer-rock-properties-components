@@ -1464,11 +1464,11 @@ var rpComponents;
                 var zoom = this.map.getZoom();
                 var bounds = this.map.getBounds();
                 var parms = [];
-                parms.push("xmin=" + Math.max(bounds.getWest() - 20 / Math.pow(zoom, 1.2), 60));
-                +parms.push("xmax=" + Math.min(bounds.getEast() + 20 / Math.pow(zoom, 1.2), 160));
+                parms.push("xmin=" + Math.max(bounds.getWest() - 20 / Math.pow(zoom, 1.2), 40));
+                +parms.push("xmax=" + Math.min(bounds.getEast() + 20 / Math.pow(zoom, 1.2), 179));
                 parms.push("ymin=" + Math.max(bounds.getSouth() - 10 / Math.pow(zoom, 1.2), -85));
-                parms.push("ymax=" + Math.min(bounds.getNorth() + 10 / Math.pow(zoom, 1.2), 0));
-                parms.push("zoom=" + (Math.max(zoom, 4)));
+                parms.push("ymax=" + Math.min(bounds.getNorth() + 10 / Math.pow(zoom, 1.2), 10));
+                parms.push("zoom=" + (Math.max(zoom, 5)));
                 var geojsonMarkerOptions = {
                     radius: 8,
                     fillColor: "#ff0000",
@@ -1482,14 +1482,14 @@ var rpComponents;
                     if (instanceSequence < _this.sequence) {
                         return;
                     }
-                    var maxRadius = Math.sqrt(d3.max(result.data.features, function (item) {
+                    var maxCount = d3.max(result.data.features, function (item) {
                         return item.properties.count;
-                    }));
+                    });
                     _this.layer = null;
                     _this.layer = L.geoJson(result.data, {
                         pointToLayer: function (feature, latlng) {
                             var geojsonMarkerOptions = {
-                                radius: 6 + 35 / maxRadius * Math.pow(feature.properties.count, 0.4),
+                                radius: 4 + 20 * Math.pow(feature.properties.count / maxCount, 0.2),
                                 fillColor: "#ff0000",
                                 color: "#000",
                                 weight: 1,
@@ -1497,7 +1497,7 @@ var rpComponents;
                                 fillOpacity: 0.8
                             };
                             var marker = L.circleMarker(latlng, geojsonMarkerOptions)
-                                .bindLabel("" + feature.properties.count, { noHide: true });
+                                .bindLabel("" + feature.properties.count, { noHide: zoom > 4 });
                             marker.on("click", function () {
                                 var id = this.feature.id.split("/");
                                 rootScope.$broadcast('rocks.cluster.selected', {
