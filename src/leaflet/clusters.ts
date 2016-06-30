@@ -76,11 +76,11 @@ module rpComponents.clusterService {
 		   var zoom = this.map.getZoom();
 		   var bounds = this.map.getBounds();
 		   var parms: string[] = [];
-		   parms.push("xmin=" + Math.max(bounds.getWest() - 20/Math.pow(zoom, 1.2), 40)); + 
-		   parms.push("xmax=" + Math.min(bounds.getEast() + 20/Math.pow(zoom, 1.2), 179));
-		   parms.push("ymin=" + Math.max(bounds.getSouth() - 10/Math.pow(zoom, 1.2), -89));
-		   parms.push("ymax=" + Math.min(bounds.getNorth() + 10/Math.pow(zoom, 1.2), 10)); 
-		   parms.push("zoom=" + (Math.max(zoom, 5)));
+		   parms.push("xmin=" + Math.max(bounds.getWest() - 24/Math.pow(zoom, 1.2), 40)); + 
+		   parms.push("xmax=" + Math.min(bounds.getEast() + 24/Math.pow(zoom, 1.2), 179));
+		   parms.push("ymin=" + Math.max(bounds.getSouth() - 12/Math.pow(zoom, 1.2), -89));
+		   parms.push("ymax=" + Math.min(bounds.getNorth() + 12/Math.pow(zoom, 1.2), 10)); 
+		   parms.push("zoom=" + (Math.max(zoom, 6)));
 		    	
 		   var geojsonMarkerOptions = {
 		      radius: 8,
@@ -115,7 +115,7 @@ module rpComponents.clusterService {
 		    		  	    fillOpacity: 0.8
 		    		  	};
 		    		   var marker = L.circleMarker(latlng, geojsonMarkerOptions)
-		    		        	.bindLabel("" + feature.properties.count, { noHide: zoom > 4 });
+		    		        	.bindLabel("" + feature.properties.count, { noHide: zoom > 5 });
 		    		   marker.on("click", function() {
 		    		     	var id = this.feature.id.split("/");
 		    		      
